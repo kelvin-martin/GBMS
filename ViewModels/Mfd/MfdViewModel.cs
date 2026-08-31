@@ -91,7 +91,7 @@ public partial class MfdViewModel : ObservableObject
         CurrentContentViewModel = CurrentFunctionalArea switch
         {
             MfdFunctionalArea.SA =>
-                new MfdPlaceholderViewModel("Situation Awareness"),
+                new TacticalMapViewModel(),
 
             MfdFunctionalArea.WPN =>
                 new MfdPlaceholderViewModel("Weapon System"),
@@ -120,6 +120,9 @@ public partial class MfdViewModel : ObservableObject
 
     public void SelectFunctionalArea(MfdFunctionalArea functionalArea)
     {
+        if (CurrentFunctionalArea == functionalArea)
+            return;
+
         CurrentFunctionalArea = functionalArea;
 
         Logger.Information("Functional area selected: {FunctionalArea}", functionalArea);

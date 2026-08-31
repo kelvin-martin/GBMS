@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:GBMS.ViewModels.Mfd"
+             xmlns:views="using:GBMS.Views.Mfd"
              x:DataType="vm:MfdViewModel"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="GBMS.Views.Mfd.MfdView">
@@ -71,7 +72,11 @@
                        FontSize="32"
                        FontWeight="Bold"/>
         </DataTemplate>
+        <DataTemplate DataType="vm:TacticalMapViewModel">
+            <views:TacticalMapView />
+        </DataTemplate>
     </UserControl.DataTemplates>
+
 
 
     <Border Background="#101010"
@@ -183,7 +188,7 @@
                         Content="F4"
                         Classes="MfdKey"
                         Margin="3"
-                        Click="OnF4Click"/> 
+                        Click="OnF4Click"/>
 
                 <Button Grid.Row="4"
                         Content="F5"
