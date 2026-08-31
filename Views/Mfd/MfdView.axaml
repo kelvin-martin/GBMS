@@ -1,0 +1,380 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:GBMS.ViewModels.Mfd"
+             x:DataType="vm:MfdViewModel"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="GBMS.Views.Mfd.MfdView">
+
+    <UserControl.Styles>
+
+
+        <Style Selector="Button.MfdPower">
+            <Setter Property="Width" Value="44"/>
+            <Setter Property="Height" Value="44"/>
+            <Setter Property="Background" Value="#181818"/>
+            <Setter Property="Foreground" Value="#70C070"/>
+            <Setter Property="BorderBrush" Value="#505050"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontSize" Value="22"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="4"/>
+        </Style>
+
+        <Style Selector="Button.MfdPower:pointerover">
+            <Setter Property="Background" Value="#303030"/>
+        </Style>
+
+        <Style Selector="Button.MfdPower:pressed">
+            <Setter Property="Background" Value="#404040"/>
+        </Style>
+
+
+        <Style Selector="Button.MfdKey">
+            <Setter Property="Width" Value="64"/>
+            <Setter Property="Height" Value="44"/>
+            <Setter Property="Background" Value="#181818"/>
+            <Setter Property="Foreground" Value="#E0E0E0"/>
+            <Setter Property="BorderBrush" Value="#505050"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="4"/>
+        </Style>
+
+        <Style Selector="Button.MfdKey:pointerover">
+            <Setter Property="Background" Value="#303030"/>
+        </Style>
+
+        <Style Selector="Button.MfdKey:pressed">
+            <Setter Property="Background" Value="#404040"/>
+        </Style>
+
+        <Style Selector="Button.MfdKey:disabled">
+            <Setter Property="Background" Value="#101010"/>
+            <Setter Property="Foreground" Value="#404040"/>
+            <Setter Property="BorderBrush" Value="#202020"/>
+        </Style>
+
+    </UserControl.Styles>
+
+    <UserControl.DataTemplates>
+        <DataTemplate DataType="vm:MfdPlaceholderViewModel">
+            <TextBlock Text="{Binding Title}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       FontSize="32"
+                       FontWeight="Bold"/>
+        </DataTemplate>
+    </UserControl.DataTemplates>
+
+
+    <Border Background="#101010"
+            Padding="8">
+
+        <Grid RowDefinitions="64,*,64"
+              ColumnDefinitions="72,*,72">
+
+            <!-- ========================================================= -->
+            <!-- Power                                                       -->
+            <!-- ========================================================= -->
+
+            <Button Grid.Row="0"
+                    Grid.Column="0"
+                    Content="⏻"
+                    Classes="MfdPower"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Click="OnPowerClick"/>
+
+            <!-- ========================================================= -->
+            <!-- Top functional-area keys                                  -->
+            <!-- ========================================================= -->
+
+            <Grid Grid.Row="0"
+                  Grid.Column="1"
+                  ColumnDefinitions="*,*,*,*,*,*,*,*"
+                  Margin="0,0,0,6">
+
+                <Button Grid.Column="0"
+                        Content="SA"
+                        Classes="MfdKey"
+                        Margin="3"
+                        Click="OnGva1Click"/>
+
+                <Button Grid.Column="1"
+                        Content="WPN"
+                        Classes="MfdKey"
+                        Margin="3"
+                        Click="OnGva2Click"/>
+
+                <Button Grid.Column="2"
+                        Content="DEF"
+                        Classes="MfdKey"
+                        Margin="3"
+                        Click="OnGva3Click"/>
+
+                <Button Grid.Column="3"
+                        Content="SYS"
+                        Classes="MfdKey"
+                        Margin="3"
+                        Click="OnGva4Click"/>
+
+                <Button Grid.Column="4"
+                        Content="DRV"
+                        Classes="MfdKey"
+                        Margin="3"
+                        Click="OnGva5Click"/>
+
+                <Button Grid.Column="5"
+                        Content="STR"
+                        Classes="MfdKey"
+                        Margin="3"
+                        Click="OnGva6Click"/>
+
+                <Button Grid.Column="6"
+                        Content="COM"
+                        Classes="MfdKey"
+                        Margin="3"
+                        Click="OnGva7Click"/>
+
+                <Button Grid.Column="7"
+                        Content="BMS"
+                        Classes="MfdKey"
+                        Margin="3"
+                        Click="OnGva8Click"/>
+
+            </Grid>
+
+
+            <!-- ========================================================= -->
+            <!-- Left contextual keys                                        -->
+            <!-- ========================================================= -->
+
+            <Grid Grid.Row="1"
+                  Grid.Column="0"
+                  RowDefinitions="*,*,*,*,*,*"
+                  Margin="0,0,6,0">
+
+                <Button Grid.Row="0"
+                        Content="F1"
+                        Classes="MfdKey"
+                        Margin="3"/>
+
+                <Button Grid.Row="1"
+                        Content="F2"
+                        Classes="MfdKey"
+                        Margin="3"/>
+
+                <Button Grid.Row="2"
+                        Content="F3"
+                        Classes="MfdKey"
+                        Margin="3"/>
+
+                <Button Grid.Row="3"
+                        Content="F4"
+                        Classes="MfdKey"
+                        Margin="3"/>
+
+                <Button Grid.Row="4"
+                        Content="F5"
+                        Classes="MfdKey"
+                        Margin="3"/>
+
+                <Button Grid.Row="5"
+                        Content="F6"
+                        Classes="MfdKey"
+                        Margin="3"/>
+
+            </Grid>
+
+
+            <!-- ========================================================= -->
+            <!-- Central display area                                        -->
+            <!-- ========================================================= -->
+
+            <Border Grid.Row="1"
+                    Grid.Column="1"
+                    Background="Black"
+                    BorderBrush="#555555"
+                    BorderThickness="1">
+
+                <Grid RowDefinitions="48,*,42">
+
+                    <!-- ================================================ -->
+                    <!-- Persistent system header                          -->
+                    <!-- ================================================ -->
+
+                    <Border Grid.Row="0"
+                            Background="#151515"
+                            BorderBrush="#404040"
+                            BorderThickness="0,0,0,1"
+                            Padding="12,0">
+
+                        <Grid ColumnDefinitions="*,Auto,*">
+
+                            <TextBlock Grid.Column="0"
+                                       Text="GBMS"
+                                       VerticalAlignment="Center"
+                                       FontSize="16"
+                                       FontWeight="Bold"
+                                       Foreground="#E0E0E0"/>
+
+                            <TextBlock Grid.Column="1"
+                                       Text="SYSTEM"
+                                       VerticalAlignment="Center"
+                                       FontSize="14"
+                                       Foreground="#E0E0E0"/>
+
+                            <TextBlock Grid.Column="2"
+                                       Text="19:00:00"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Right"
+                                       FontSize="14"
+                                       Foreground="#E0E0E0"/>
+
+                        </Grid>
+
+                    </Border>
+
+
+                    <!-- ================================================ -->
+                    <!-- Application content                               -->
+                    <!-- ================================================ -->
+
+                    <Border Grid.Row="1"
+                            Padding="12">
+
+                        <ContentControl x:Name="ContentArea"
+                                        Content="{Binding CurrentContentViewModel}" />
+
+                    </Border>
+
+
+                    <!-- ================================================ -->
+                    <!-- Alarm area                                         -->
+                    <!-- ================================================ -->
+
+                    <Border Grid.Row="2"
+                            Background="#101010"
+                            BorderBrush="#404040"
+                            BorderThickness="0,1,0,0"
+                            Padding="12,0">
+
+                        <TextBlock Text="NO ACTIVE WARNINGS"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Center"
+                                   FontSize="13"
+                                   Foreground="#70C070"/>
+
+                    </Border>
+
+                </Grid>
+
+            </Border>
+
+
+            <!-- ========================================================= -->
+            <!-- Right contextual keys                                       -->
+            <!-- ========================================================= -->
+
+            <Grid Grid.Row="1"
+                  Grid.Column="2"
+                  RowDefinitions="*,*,*,*,*,*"
+                  Margin="6,0,0,0">
+
+                <Button Grid.Row="0"
+                        Content="F7"
+                        Classes="MfdKey"
+                        Margin="3"/>
+
+                <Button Grid.Row="1"
+                        Content="F8"
+                        Classes="MfdKey"
+                        Margin="3"/>
+
+                <Button Grid.Row="2"
+                        Content="F9"
+                        Classes="MfdKey"
+                        Margin="3"/>
+
+                <Button Grid.Row="3"
+                        Content="F10"
+                        Classes="MfdKey"
+                        Margin="3"/>
+
+                <Button Grid.Row="4"
+                        Content="F11"
+                        Classes="MfdKey"
+                        Margin="3"/>
+
+                <Button Grid.Row="5"
+                        Content="F12"
+                        Classes="MfdKey"
+                        Margin="3"/>
+
+            </Grid>
+
+
+            <!-- ========================================================= -->
+            <!-- Bottom global keys                                          -->
+            <!-- ========================================================= -->
+
+            <Grid Grid.Row="2"
+                  Grid.Column="1"
+                  ColumnDefinitions="*,*,*,*,*,*,*,*"
+                  Margin="0,6,0,0">
+
+                <Button Grid.Column="0"
+                        Content="F13"
+                        Classes="MfdKey"
+                        Margin="3"/>
+
+                <Button Grid.Column="1"
+                        Content="F14"
+                        Classes="MfdKey"
+                        Margin="3"/>
+
+                <Button Grid.Column="2"
+                        Content="F15"
+                        Classes="MfdKey"
+                        Margin="3"/>
+
+                <Button Grid.Column="3"
+                        Content="F16"
+                        Classes="MfdKey"
+                        Margin="3"/>
+
+                <Button Grid.Column="4"
+                        Content="F17"
+                        Classes="MfdKey"
+                        Margin="3"/>
+
+                <Button Grid.Column="5"
+                        Content="F18"
+                        Classes="MfdKey"
+                        Margin="3"/>
+
+                <Button Grid.Column="6"
+                        Content="F19"
+                        Classes="MfdKey"
+                        Margin="3"/>
+
+                <Button Grid.Column="7"
+                        Content="F20"
+                        Classes="MfdKey"
+                        Margin="3"/>
+
+            </Grid>
+
+        </Grid>
+
+    </Border>
+
+</UserControl>
+
