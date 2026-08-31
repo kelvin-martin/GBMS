@@ -164,32 +164,38 @@
                 <Button Grid.Row="0"
                         Content="F1"
                         Classes="MfdKey"
-                        Margin="3"/>
+                        Margin="3"
+                        Click="OnF1Click"/>
 
                 <Button Grid.Row="1"
                         Content="F2"
                         Classes="MfdKey"
-                        Margin="3"/>
+                        Margin="3"
+                        Click="OnF2Click"/>
 
                 <Button Grid.Row="2"
                         Content="F3"
                         Classes="MfdKey"
-                        Margin="3"/>
+                        Margin="3"
+                        Click="OnF3Click"/>
 
                 <Button Grid.Row="3"
                         Content="F4"
                         Classes="MfdKey"
-                        Margin="3"/>
+                        Margin="3"
+                        Click="OnF4Click"/> 
 
                 <Button Grid.Row="4"
                         Content="F5"
                         Classes="MfdKey"
-                        Margin="3"/>
+                        Margin="3"
+                        Click="OnF5Click"/>
 
                 <Button Grid.Row="5"
                         Content="F6"
                         Classes="MfdKey"
-                        Margin="3"/>
+                        Margin="3"
+                        Click="OnF6Click"/>
 
             </Grid>
 
@@ -291,32 +297,38 @@
                 <Button Grid.Row="0"
                         Content="F7"
                         Classes="MfdKey"
-                        Margin="3"/>
+                        Margin="3"
+                        Click="OnF7Click"/>
 
                 <Button Grid.Row="1"
                         Content="F8"
                         Classes="MfdKey"
-                        Margin="3"/>
+                        Margin="3"
+                        Click="OnF8Click"/>
 
                 <Button Grid.Row="2"
                         Content="F9"
                         Classes="MfdKey"
-                        Margin="3"/>
+                        Margin="3"
+                        Click="OnF9Click"/>
 
                 <Button Grid.Row="3"
                         Content="F10"
                         Classes="MfdKey"
-                        Margin="3"/>
+                        Margin="3"
+                        Click="OnF10Click"/>
 
                 <Button Grid.Row="4"
                         Content="F11"
                         Classes="MfdKey"
-                        Margin="3"/>
+                        Margin="3"
+                        Click="OnF11Click"/>
 
                 <Button Grid.Row="5"
                         Content="F12"
                         Classes="MfdKey"
-                        Margin="3"/>
+                        Margin="3"
+                        Click="OnF12Click"/>
 
             </Grid>
 

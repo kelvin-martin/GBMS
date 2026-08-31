@@ -18,12 +18,13 @@
     </PackageReference>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="Mapsui.Avalonia12" Version="5.1.0" />
+    <PackageReference Include="Serilog" Version="4.4.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Models\" />
     <Folder Include="Mapping\" />
-    <Folder Include="Services\" />
     <Folder Include="Simulation\" />
   </ItemGroup>
 </Project>

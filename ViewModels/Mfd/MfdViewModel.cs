@@ -2,6 +2,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.ComponentModel;
+using GBMS.Services;
 
 namespace GBMS.ViewModels.Mfd;
 
@@ -120,11 +121,23 @@ public partial class MfdViewModel : ObservableObject
     public void SelectFunctionalArea(MfdFunctionalArea functionalArea)
     {
         CurrentFunctionalArea = functionalArea;
+
+        Logger.Information("Functional area selected: {FunctionalArea}", functionalArea);
     }
 
     public void ClearFunctionalArea()
     {
         CurrentFunctionalArea = MfdFunctionalArea.None;
+    }
+
+    public void HandleFunctionKey(MfdFunctionKey key)
+    {
+        Logger.Debug("MFD function key received: {FunctionKey}", key);
+
+        if (CurrentContentViewModel is IMfdInputReceiver receiver)
+        {
+            receiver.HandleFunctionKey(key);
+        }
     }
 
     public void PowerOff()
