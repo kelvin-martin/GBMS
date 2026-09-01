@@ -6,17 +6,23 @@ using BruTile.Predefined;
 using GBMS.Services;
 using GBMS.ViewModels.Mfd;
 using Mapsui;
+using Mapsui.Projections;
 using Mapsui.Tiling.Layers;
 using Mapsui.UI.Avalonia;
-using Mapsui.Projections;
+using NetTopologySuite.Utilities;
+using static GBMS.ViewModels.Mfd.TacticalMapViewModel;
 
 namespace GBMS.Views.Mfd;
 
 public partial class TacticalMapView : UserControl
 {
+    const double KMInOneDegreeLat = 111.0; // approximate conversion factor for latitude degrees to kilometers
 
     private TacticalMapViewModel? _viewModel;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TacticalMapView"/> class.
+    /// </summary>
     public TacticalMapView()
     {
         InitializeComponent();
@@ -27,16 +33,24 @@ public partial class TacticalMapView : UserControl
         InitialiseOnlineMap();
     }
 
-
+    /// <summary>
+    /// Handles the DataContextChanged event.
+    /// This method is called whenever the DataContext of the view changes. 
+    /// It unsubscribes from events of the previous ViewModel (if any) and subscribes 
+    /// to events of the new ViewModel. It also logs the initialization of the 
+    /// view with the new ViewModel.
+    /// </summary>
+    /// <param name="sender">The source of the event.</param>
+    /// <param name="e">The event data.</param>
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
         if (_viewModel != null)
         {
-            _viewModel.CentreMapOnVehicleRequested -=
-                OnCentreMapOnVehicleRequested;
+            _viewModel.CentreMapOnVehicleRequested -= OnCentreMapOnVehicleRequested;
 
-            _viewModel.ZoomLevelChanged -=
-                OnZoomLevelChanged;
+            _viewModel.ZoomLevelChanged -= OnZoomLevelChanged;
+
+            _viewModel.PanRequested -= OnPanRequested;
         }
 
         _viewModel = DataContext as TacticalMapViewModel;
@@ -47,11 +61,11 @@ public partial class TacticalMapView : UserControl
                 "TacticalMapView initialized with ViewModel: {ViewModelType}",
                 _viewModel.GetType().Name);
 
-            _viewModel.CentreMapOnVehicleRequested +=
-                OnCentreMapOnVehicleRequested;
+            _viewModel.CentreMapOnVehicleRequested += OnCentreMapOnVehicleRequested;
 
-            _viewModel.ZoomLevelChanged +=
-                OnZoomLevelChanged;
+            _viewModel.ZoomLevelChanged += OnZoomLevelChanged;
+
+            _viewModel.PanRequested += OnPanRequested;
         }
     }
 
@@ -103,21 +117,26 @@ public partial class TacticalMapView : UserControl
         MapControl.Map.Layers.Add(offlineLayer);
     }
 
+    /// <summary>
+    /// Handles the CentreMapOnVehicleRequested event.
+    /// This method is called whenever the ViewModel requests to centre the map on the vehicle's position.
+    /// </summary>
+    /// <param name="latitude">The latitude of the vehicle.</param>
+    /// <param name="longitude">The longitude of the vehicle.</param>
     private void OnCentreMapOnVehicleRequested(double latitude, double longitude)
     {
         const double extentKm = 10.0;
 
-        Logger.Information(
+        Logger.Debug(
             "SA Tactical Map centring on vehicle: Lat={Latitude}, Lon={Longitude}",
             latitude, longitude);
 
-        SetMapExtent(
-               latitude, longitude, extentKm);
+        SetMapExtent(latitude, longitude, extentKm);
     }
 
     private void OnZoomLevelChanged(double zoomLevelKm)
     {
-        Logger.Information(
+        Logger.Debug(
             "SA Tactical Map applying zoom level: {ZoomLevel} km",
             zoomLevelKm);
 
@@ -128,12 +147,80 @@ public partial class TacticalMapView : UserControl
         SetMapExtent(latitude, longitude, zoomLevelKm);
     }
 
-    private void SetMapExtent(double latitude, double longitude, double extentKm)
+    private void OnPanRequested(MapPanDirection direction, double distanceKm)
     {
-        double latitudeOffset = extentKm / 111.0;
+        Logger.Debug(
+            "SA Tactical Map applying pan: Direction={Direction}, Distance={Distance} km",
+            direction, distanceKm);
+
+        var navigator = MapControl.Map.Navigator;
+
+        if (navigator == null)
+        {
+            Logger.Warning("Unable to pan map: navigator unavailable.");
+            return;
+        }
+
+        var viewport = navigator.Viewport;
+
+        double centerX = viewport.CenterX;
+        double centerY = viewport.CenterY;
+
+        // Convert current map centre from Spherical Mercator
+        // back to longitude/latitude.
+        var currentPosition =
+            SphericalMercator.ToLonLat(centerX, centerY);
+
+        double latitude = currentPosition.lat;
+        double longitude = currentPosition.lon;
+
+        // Convert the requested ground distance into
+        // latitude/longitude offsets.
+        double latitudeOffset = distanceKm / KMInOneDegreeLat;
 
         double longitudeOffset =
-            extentKm / (111.0 * Math.Cos(latitude * Math.PI / 180.0));
+            distanceKm / (KMInOneDegreeLat * Math.Cos(latitude * Math.PI / 180.0));
+
+        switch (direction)
+        {
+            case MapPanDirection.Left:
+                longitude -= longitudeOffset;
+                break;
+
+            case MapPanDirection.Right:
+                longitude += longitudeOffset;
+                break;
+
+            case MapPanDirection.Up:
+                latitude += latitudeOffset;
+                break;
+
+            case MapPanDirection.Down:
+                latitude -= latitudeOffset;
+                break;
+        }
+
+        // Convert the new centre back to Spherical Mercator.
+        var newCenter = SphericalMercator.FromLonLat(longitude, latitude);
+
+        navigator.CenterOn(new MPoint(newCenter.x, newCenter.y));
+    }
+
+    /// <summary>
+    /// Sets the map extent based on the specified latitude, longitude, and extent in kilometers.
+    /// This method calculates the bounding box around the specified centre point and adjusts the map view accordingly.
+    /// </summary>
+    /// <param name="latitude">The latitude of the centre point.</param>
+    /// <param name="longitude">The longitude of the centre point.</param>
+    /// <param name="extentKm">The extent of the map in kilometers.</param>
+    private void SetMapExtent(double latitude, double longitude, double extentKm)
+    {
+        
+
+        double latitudeOffset = extentKm / KMInOneDegreeLat;
+
+        double longitudeOffset =
+            extentKm / (KMInOneDegreeLat * Math.Cos(latitude * Math.PI / 180.0));
 
         double minLatitude = latitude - latitudeOffset;
         double maxLatitude = latitude + latitudeOffset;
