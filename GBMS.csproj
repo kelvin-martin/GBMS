@@ -23,8 +23,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Models\" />
-    <Folder Include="Mapping\" />
-    <Folder Include="Simulation\" />
+    <AvaloniaResource Include="Assets\TacticalSymbols\**\*.svg" />
   </ItemGroup>
 </Project>

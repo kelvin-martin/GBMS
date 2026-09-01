@@ -126,10 +126,8 @@ public class TacticalMapViewModel : ObservableObject, IMfdInputReceiver
 
         Logger.Debug(
             "SA Tactical Map pan {Direction} requested: {Distance} km.",
-            direction,
-            panDistanceKm);
-
-        PanRequested?.Invoke(
             direction, panDistanceKm);
+
+        PanRequested?.Invoke(direction, panDistanceKm);
     }
 }

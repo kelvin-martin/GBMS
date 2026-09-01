@@ -6,10 +6,18 @@ using BruTile.Predefined;
 using GBMS.Services;
 using GBMS.ViewModels.Mfd;
 using Mapsui;
+using Mapsui.Extensions;
 using Mapsui.Projections;
 using Mapsui.Tiling.Layers;
 using Mapsui.UI.Avalonia;
+using Mapsui.Styles;
+using Mapsui.Widgets;
+using Mapsui.Widgets.InfoWidgets;
 using NetTopologySuite.Utilities;
+using Mapsui.Widgets.ScaleBar;
+using NetTopologySuite.Geometries;
+
+
 using static GBMS.ViewModels.Mfd.TacticalMapViewModel;
 
 namespace GBMS.Views.Mfd;
@@ -31,6 +39,53 @@ public partial class TacticalMapView : UserControl
 
         // InitialiseLocalCache();
         InitialiseOnlineMap();
+
+        // Add the mouse coordinates widget to the map.
+        AddMouseCoordinatesWidget();
+
+        // Add the scale bar widget to the map.
+        AddScaleBarWidget();
+
+    }
+
+    private void AddMouseCoordinatesWidget()
+    {
+        var coordinatesWidget = new LatLonMouseCoordinatesWidget()
+        {
+            Margin = new MRect(10),
+            BackColor = new Color(255, 255, 255, 220),
+            TextColor = Color.Black,
+            Padding = new MRect(8, 4, 8, 4),
+            CornerRadius = 4
+        };
+        MapControl.Map.Widgets.Add(coordinatesWidget);
+    }
+
+    private void AddScaleBarWidget()
+    {
+        var scaleBar = new ScaleBarWidget(MapControl.Map)
+        {
+            MaxWidth = 180,
+
+            HorizontalAlignment = Mapsui.Widgets.HorizontalAlignment.Left,
+            VerticalAlignment = Mapsui.Widgets.VerticalAlignment.Bottom,
+
+            Margin = new MRect(10),
+
+            TextColor = new Color(0, 70, 180),
+            Halo = new Color(255, 255, 255),
+
+            StrokeWidth = 3,
+            StrokeWidthHalo = 5,
+            TickLength = 8,
+
+            ScaleBarMode = ScaleBarMode.Single,
+            TextAlignment = Alignment.Center,
+
+            InputTransparent = true
+        }; 
+
+        MapControl.Map.Widgets.Add(scaleBar);
     }
 
     /// <summary>

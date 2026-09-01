@@ -346,7 +346,7 @@
                 <Button Grid.Row="2"
                         Content="R3"
                         Classes="MfdKey"
-                        Click="OnR4Click"/>
+                        Click="OnR3Click"/>
 
                 <Button Grid.Row="3"
                         Content="R4"
