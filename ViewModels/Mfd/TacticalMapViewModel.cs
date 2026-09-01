@@ -37,31 +37,31 @@ public class TacticalMapViewModel : ObservableObject, IMfdInputReceiver
 
         switch (key)
         {
-            case MfdFunctionKey.F1:
+            case MfdFunctionKey.L1:
                 ApplyCentreMapOnVehicle();
                 break;
 
-            case MfdFunctionKey.F7:
+            case MfdFunctionKey.R1:
                 SelectPreviousZoomLevel();
                 break;
 
-            case MfdFunctionKey.F8:
+            case MfdFunctionKey.R2:
                 SelectNextZoomLevel();
                 break;
 
-            case MfdFunctionKey.F9:
+            case MfdFunctionKey.R3:
                 SelectPan(MapPanDirection.Left);
                 break;
 
-            case MfdFunctionKey.F10:
+            case MfdFunctionKey.R4:
                 SelectPan(MapPanDirection.Right);
                 break;
 
-            case MfdFunctionKey.F11:
+            case MfdFunctionKey.R5:
                     SelectPan(MapPanDirection.Up);
                 break;
 
-            case MfdFunctionKey.F12:
+            case MfdFunctionKey.R6:
                     SelectPan(MapPanDirection.Down);
                 break;
 

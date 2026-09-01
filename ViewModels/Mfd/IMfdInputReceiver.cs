@@ -4,18 +4,18 @@ namespace GBMS.ViewModels.Mfd;
 
 public enum MfdFunctionKey
 {
-    F1,
-    F2,
-    F3,
-    F4,
-    F5,
-    F6,
-    F7,
-    F8,
-    F9,
-    F10,
-    F11,
-    F12
+    L1,
+    L2,
+    L3,
+    L4,
+    L5,
+    L6,
+    R1,
+    R2,
+    R3,
+    R4,
+    R5,
+    R6
 }
 
 public interface IMfdInputReceiver
