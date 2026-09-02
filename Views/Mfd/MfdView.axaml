@@ -82,9 +82,7 @@
                        FontSize="32"
                        FontWeight="Bold"/>
         </DataTemplate>
-        <DataTemplate DataType="vm:TacticalMapViewModel">
-            <views:TacticalMapView />
-        </DataTemplate>
+        
     </UserControl.DataTemplates>
 
     <Border Background="#101010"
@@ -295,8 +293,17 @@
                     <Border Grid.Row="1"
                             Padding="12">
 
-                        <ContentControl x:Name="ContentArea"
-                                        Content="{Binding CurrentContentViewModel}" />
+                        <Grid>
+
+                            <!-- Existing subsystem content -->
+                            <ContentControl x:Name="ContentArea"
+                                            Content="{Binding CurrentContentViewModel}" />
+
+                            <!-- Persistent Tactical Map -->
+                            <views:TacticalMapView x:Name="TacticalMapView"
+                                                   IsVisible="False" />
+
+                        </Grid>
 
                     </Border>
 

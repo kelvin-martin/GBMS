@@ -64,6 +64,8 @@ public partial class MfdViewModel : ObservableObject
         }
     ];
 
+    public TacticalMapViewModel TacticalMapViewModel { get; } = new();
+
     public MfdViewModel()
     {
         UpdateCurrentContentViewModel();
@@ -90,8 +92,7 @@ public partial class MfdViewModel : ObservableObject
     {
         CurrentContentViewModel = CurrentFunctionalArea switch
         {
-            MfdFunctionalArea.SA =>
-                new TacticalMapViewModel(),
+            MfdFunctionalArea.SA => TacticalMapViewModel,
 
             MfdFunctionalArea.WPN =>
                 new MfdPlaceholderViewModel("Weapon System"),

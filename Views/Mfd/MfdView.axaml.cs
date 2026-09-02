@@ -18,7 +18,10 @@ public partial class MfdView : UserControl
     public MfdView()
     {
         InitializeComponent();
+
         DataContext = ViewModel;
+
+        TacticalMapView.DataContext = ViewModel.TacticalMapViewModel;
     }
 
     /// <summary>
@@ -33,6 +36,10 @@ public partial class MfdView : UserControl
     private void SetActiveFunctionalArea(MfdFunctionalArea functionalArea)
     {
         _activeFunctionalArea = functionalArea;
+
+        TacticalMapView.IsVisible = functionalArea == MfdFunctionalArea.SA;
+        ContentArea.IsVisible = functionalArea != MfdFunctionalArea.SA;
+
         UpdateFunctionalAreaIndicators();
     }
 

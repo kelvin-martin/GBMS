@@ -1,7 +1,9 @@
 ﻿using System;
+using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using GBMS.Models;
 using GBMS.Services;
+using GBMS.Simulation;
 
 namespace GBMS.ViewModels.Mfd;
 
@@ -13,7 +15,9 @@ public class TacticalMapViewModel : ObservableObject, IMfdInputReceiver
 
     public event Action<MapPanDirection, double>? PanRequested;
 
-    public OwnVehicle? OwnVehicle { get; }
+    private readonly SimulationManager _simManager;
+
+    public OwnVehicle OwnVehicle => _simManager.OwnVehicle;
 
     public enum MapPanDirection
     {
@@ -30,15 +34,14 @@ public class TacticalMapViewModel : ObservableObject, IMfdInputReceiver
     // Start at the 10 km zoom level.
     private int _zoomLevelIndex = 2;
 
-
-
     public TacticalMapViewModel()
     {
-        // assume this is temporary until we get the actual vehicle position from the simulation
-        OwnVehicle = new OwnVehicle();
+        _simManager = Design.IsDesignMode
+            ? new SimulationManager()
+            :  SimulationFactory.Current;
 
+        //_simManager = SimulationFactory.Current;
     }
-
 
     public void HandleFunctionKey(MfdFunctionKey key)
     {

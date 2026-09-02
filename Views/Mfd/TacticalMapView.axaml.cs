@@ -286,8 +286,6 @@ public partial class TacticalMapView : UserControl
     /// <param name="extentKm">The extent of the map in kilometers.</param>
     private void SetMapExtent(double latitude, double longitude, double extentKm)
     {
-        
-
         double latitudeOffset = extentKm / KMInOneDegreeLat;
 
         double longitudeOffset =
