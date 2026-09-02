@@ -82,7 +82,7 @@
                        FontSize="32"
                        FontWeight="Bold"/>
         </DataTemplate>
-        
+
     </UserControl.DataTemplates>
 
     <Border Background="#101010"
@@ -275,7 +275,7 @@
                                        Foreground="#E0E0E0"/>
 
                             <TextBlock Grid.Column="2"
-                                       Text="19:00:00"
+                                       Text="{Binding SimulationTime}"
                                        VerticalAlignment="Center"
                                        HorizontalAlignment="Right"
                                        FontSize="14"

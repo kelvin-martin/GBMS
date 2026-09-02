@@ -1,8 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using GBMS.Services;
+using GBMS.Simulation;
 
 namespace GBMS.ViewModels.Mfd;
 
@@ -66,8 +70,28 @@ public partial class MfdViewModel : ObservableObject
 
     public TacticalMapViewModel TacticalMapViewModel { get; } = new();
 
+    private readonly ISimulationClock? _clock;
+
+    private readonly DispatcherTimer? _clockTimer;
+
+    public string SimulationTime =>
+        _clock?.UtcNow.ToString("HH:mm:ss") ?? "--:--:--";
+
     public MfdViewModel()
     {
+        if (!Design.IsDesignMode)
+        {
+            _clock = SimulationFactory.Current.Clock;
+
+            _clockTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(1)
+            };
+
+            _clockTimer.Tick += OnClockTimerTick;
+            _clockTimer.Start();
+        }
+
         UpdateCurrentContentViewModel();
     }
 
@@ -152,5 +176,10 @@ public partial class MfdViewModel : ObservableObject
         {
             lifetime.Shutdown();
         }
+    }
+
+    private void OnClockTimerTick(object? sender, EventArgs e)
+    {
+        OnPropertyChanged(nameof(SimulationTime));
     }
 }

@@ -15,9 +15,9 @@ public class TacticalMapViewModel : ObservableObject, IMfdInputReceiver
 
     public event Action<MapPanDirection, double>? PanRequested;
 
-    private readonly SimulationManager _simManager;
+    private readonly SimulationManager? _simManager;
 
-    public OwnVehicle OwnVehicle => _simManager.OwnVehicle;
+    public OwnVehicle? OwnVehicle => _simManager?.OwnVehicle;
 
     public enum MapPanDirection
     {
@@ -36,11 +36,10 @@ public class TacticalMapViewModel : ObservableObject, IMfdInputReceiver
 
     public TacticalMapViewModel()
     {
-        _simManager = Design.IsDesignMode
-            ? new SimulationManager()
-            :  SimulationFactory.Current;
-
-        //_simManager = SimulationFactory.Current;
+        if (!Design.IsDesignMode)
+        {
+            _simManager = SimulationFactory.Current;
+        }
     }
 
     public void HandleFunctionKey(MfdFunctionKey key)
@@ -87,6 +86,12 @@ public class TacticalMapViewModel : ObservableObject, IMfdInputReceiver
 
     private void ApplyCentreMapOnVehicle()
     {
+        if (_simManager == null)
+        {
+            Logger.Warning("Centre map on vehicle requested, but SimulationManager is null.");
+            return;
+        }
+
         if (OwnVehicle == null)
         {
             Logger.Warning("Centre map on vehicle requested, but OwnVehicle is null.");
