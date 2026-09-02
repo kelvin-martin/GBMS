@@ -2,6 +2,7 @@
 using System.IO;
 using System.Text;
 using GBMS.Models;
+using GBMS.Simulation;
 using Mapsui;
 using Mapsui.Layers;
 using Mapsui.Projections;
@@ -9,6 +10,9 @@ using Mapsui.Styles;
 
 namespace GBMS.Services;
 
+/// <summary>
+/// Represents a layer for displaying tactical symbols on the map.
+/// </summary>
 public sealed class TacticalSymbolLayer
 {
     private const string LayerName = "Tactical Symbols";
@@ -30,18 +34,22 @@ public sealed class TacticalSymbolLayer
 
     public MemoryLayer Layer => _layer;
 
-    public void SetOwnVehicle(OwnVehicle ownVehicle)
+    /// <summary>
+    /// Sets the own vehicle's state on the tactical symbol layer.
+    /// </summary>
+    /// <param name="ownVehicleState">The state of the own vehicle.</param>
+    public void SetOwnVehicle(OwnVehicleState ownVehicleState)
     {
         var position = SphericalMercator.FromLonLat(
-            ownVehicle.Position.Longitude,
-            ownVehicle.Position.Latitude);
+            ownVehicleState.Position.Longitude,
+            ownVehicleState.Position.Latitude);
 
         var feature = new PointFeature(new MPoint(position.x, position.y));
 
         feature.Styles.Add(
             CreateSymbolStyle(
                 "FriendlyTrackedArmouredVehicle",
-                ownVehicle.Position.Heading));
+                ownVehicleState.Position.Heading));
 
         _layer.Features = new[] { feature };
 

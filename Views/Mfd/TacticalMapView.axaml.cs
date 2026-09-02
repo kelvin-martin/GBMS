@@ -49,6 +49,9 @@ public partial class TacticalMapView : UserControl
 
     }
 
+    /// <summary>
+    /// Adds a mouse coordinates widget to the map.
+    /// </summary>
     private void AddMouseCoordinatesWidget()
     {
         var coordinatesWidget = new LatLonMouseCoordinatesWidget()
@@ -62,6 +65,9 @@ public partial class TacticalMapView : UserControl
         MapControl.Map.Widgets.Add(coordinatesWidget);
     }
 
+    /// <summary>
+    /// Adds a scale bar widget to the map.
+    /// </summary>
     private void AddScaleBarWidget()
     {
         var scaleBar = new ScaleBarWidget(MapControl.Map)
@@ -123,11 +129,12 @@ public partial class TacticalMapView : UserControl
 
             _viewModel.PanRequested += OnPanRequested;
 
+            _viewModel.MapUpdateRequested += OnMapUpdateRequested;
+
             UpdateOwnVehicleSymbol();
         }
 
     }
-
 
     /// <summary>
     /// Initializes an online map layer (e.g., OpenStreetMap).
@@ -175,20 +182,22 @@ public partial class TacticalMapView : UserControl
         // Add it to your map control
         MapControl.Map.Layers.Add(offlineLayer);
     }
-
-
+   
+    /// <summary>
+    /// Updates the tactical symbol representing the own vehicle on the map.    
+    /// </summary>
     private void UpdateOwnVehicleSymbol()
     {
         if (_viewModel == null)
             return;
 
-        if (_viewModel.OwnVehicle == null)
+        if (_viewModel.OwnVehicleState == null)
         {
             Logger.Warning("OwnVehicle is null in ViewModel. Cannot update tactical symbol.");
             return;
         }
 
-        _tacticalSymbolLayer.SetOwnVehicle(_viewModel.OwnVehicle);
+        _tacticalSymbolLayer.SetOwnVehicle(_viewModel.OwnVehicleState);
     }
 
     /// <summary>
@@ -207,18 +216,35 @@ public partial class TacticalMapView : UserControl
         SetMapExtent(latitude, longitude, extentKm);
     }
 
+    /// <summary>
+    /// Handles the ZoomLevelChanged event from the ViewModel.
+    /// This method is called to update the map's zoom level.
+    /// </summary>
+    /// <param name="zoomLevelKm">The new zoom level in kilometers.</param>
     private void OnZoomLevelChanged(double zoomLevelKm)
     {
         Logger.Debug("SA Tactical Map applying zoom level: {ZoomLevel} km",
             zoomLevelKm);
 
+        if (_viewModel == null)
+        {
+            Logger.Warning("Unable to apply zoom level: ViewModel is null.");
+            return;
+        }
+
         // For now, use the vehicle position as the centre.
-        double latitude = _viewModel?.OwnVehicle?.Position.Latitude ?? 0.0;
-        double longitude = _viewModel?.OwnVehicle?.Position.Longitude ?? 0.0;
+        double latitude = _viewModel.OwnVehicleState?.Position.Latitude ?? 0.0;
+        double longitude = _viewModel.OwnVehicleState?.Position.Longitude ?? 0.0;
 
         SetMapExtent(latitude, longitude, zoomLevelKm);
     }
 
+    /// <summary>
+    /// Handles the PanRequested event from the ViewModel.
+    /// This method is called to pan the map in the specified direction by the specified distance.
+    /// </summary>
+    /// <param name="direction">The direction to pan the map.</param>
+    /// <param name="distanceKm">The distance to pan the map in kilometers.</param>
     private void OnPanRequested(MapPanDirection direction, double distanceKm)
     {
         Logger.Debug("SA Tactical Map applying pan: Direction={Direction}, Distance={Distance} km",
@@ -309,5 +335,16 @@ public partial class TacticalMapView : UserControl
 
         MapControl.Map.Navigator?.ZoomToBox(
             box, MBoxFit.Fit);
+    }
+
+    /// <summary>
+    /// Handles the MapUpdateRequested event from the ViewModel.
+    /// This method is called to update the map with the latest simulation state.
+    /// </summary>
+    private void OnMapUpdateRequested()
+    {
+        UpdateOwnVehicleSymbol();
+
+        MapControl.RefreshGraphics();
     }
 }

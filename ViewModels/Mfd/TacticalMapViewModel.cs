@@ -1,23 +1,30 @@
 ﻿using System;
+using Avalonia.Threading;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
-using GBMS.Models;
 using GBMS.Services;
 using GBMS.Simulation;
 
 namespace GBMS.ViewModels.Mfd;
 
+/// <summary>
+/// ViewModel for the TacticalMapView, handling map interactions and simulation state updates.
+/// </summary>
 public class TacticalMapViewModel : ObservableObject, IMfdInputReceiver
 {
+    public OwnVehicleState? OwnVehicleState => _simManager?.SimulationState.OwnVehicle;
+    
     public event Action<double, double>? CentreMapOnVehicleRequested;
 
     public event Action<double>? ZoomLevelChanged;
 
     public event Action<MapPanDirection, double>? PanRequested;
 
+    public event Action? MapUpdateRequested;
+
     private readonly SimulationManager? _simManager;
 
-    public OwnVehicle? OwnVehicle => _simManager?.OwnVehicle;
+    private readonly DispatcherTimer? _simulationStateTimer;
 
     public enum MapPanDirection
     {
@@ -34,14 +41,30 @@ public class TacticalMapViewModel : ObservableObject, IMfdInputReceiver
     // Start at the 10 km zoom level.
     private int _zoomLevelIndex = 2;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TacticalMapViewModel"/> class.
+    /// </summary>
     public TacticalMapViewModel()
     {
         if (!Design.IsDesignMode)
         {
             _simManager = SimulationFactory.Current;
+
+            _simulationStateTimer = new DispatcherTimer
+            {
+                // UI presentation rate.
+                Interval = TimeSpan.FromMilliseconds(100)
+            };
+
+            _simulationStateTimer.Tick += OnSimulationStateTimerTick;
+            _simulationStateTimer.Start();
         }
     }
 
+    /// <summary>
+    /// Handles a function key press from the MFD.
+    /// </summary>
+    /// <param name="key">The function key that was pressed.</param>
     public void HandleFunctionKey(MfdFunctionKey key)
     {
         Logger.Debug("SA Tactical Map received function key: {FunctionKey}", key);
@@ -84,6 +107,9 @@ public class TacticalMapViewModel : ObservableObject, IMfdInputReceiver
         }
     }
 
+    /// <summary>
+    /// Handles the action to centre the map on the own vehicle's position.
+    /// </summary>
     private void ApplyCentreMapOnVehicle()
     {
         if (_simManager == null)
@@ -92,17 +118,16 @@ public class TacticalMapViewModel : ObservableObject, IMfdInputReceiver
             return;
         }
 
-        if (OwnVehicle == null)
-        {
-            Logger.Warning("Centre map on vehicle requested, but OwnVehicle is null.");
+        var ownVehicleState = _simManager.SimulationState.OwnVehicle;
+        if (ownVehicleState == null)
             return;
-        }
 
-        Logger.Information($"Centre map on vehicle requested. Pos: {OwnVehicle.Position.Latitude}, {OwnVehicle.Position.Longitude}");
-
-        CentreMapOnVehicleRequested?.Invoke(OwnVehicle.Position.Latitude, OwnVehicle.Position.Longitude);
+        CentreMapOnVehicleRequested?.Invoke(ownVehicleState.Position.Latitude, ownVehicleState.Position.Longitude);
     }
 
+    /// <summary>
+    /// Selects the previous zoom level for the map.
+    /// </summary>
     private void SelectPreviousZoomLevel()
     {
         if (_zoomLevelIndex > 0)
@@ -123,6 +148,9 @@ public class TacticalMapViewModel : ObservableObject, IMfdInputReceiver
         }
     }
 
+    /// <summary>
+    /// Selects the next zoom level for the map.
+    /// </summary>
     private void SelectNextZoomLevel()
     {
         if (_zoomLevelIndex < ZoomLevelsKm.Length - 1)
@@ -152,5 +180,23 @@ public class TacticalMapViewModel : ObservableObject, IMfdInputReceiver
             direction, panDistanceKm);
 
         PanRequested?.Invoke(direction, panDistanceKm);
+    }
+
+    /// <summary>
+    /// Handles the tick event of the simulation state timer.
+    /// This method is called periodically to update the map with the latest simulation state.
+    /// </summary>
+    /// <param name="sender">The source of the event.</param>
+    /// <param name="e">The event data.</param>
+    private void OnSimulationStateTimerTick(object? sender, EventArgs e)
+    {
+        if (_simManager == null)
+            return;
+
+        var ownVehicleState = _simManager.SimulationState.OwnVehicle;
+        if (ownVehicleState == null)
+            return;
+
+        MapUpdateRequested?.Invoke();
     }
 }

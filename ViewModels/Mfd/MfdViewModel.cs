@@ -172,6 +172,8 @@ public partial class MfdViewModel : ObservableObject
     {
         ClearFunctionalArea();
 
+        SimulationFactory.Current.Stop();
+
         if (Application.Current?.ApplicationLifetime is IControlledApplicationLifetime lifetime)
         {
             lifetime.Shutdown();
