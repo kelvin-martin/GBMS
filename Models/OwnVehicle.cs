@@ -70,11 +70,6 @@ public sealed class OwnVehicle
             newLongitudeRadians * 180.0 / Math.PI;
 
         Position = new Position(
-            newLatitude,
-            newLongitude,
-            Position.Heading);
-
-        // Services.Logger.Debug("OwnVehicle updated: Position = {Position}, Speed = {Speed} m/s",
-        //    Position, Speed);
+            newLatitude, newLongitude, Position.Heading);
     }
 }

@@ -1,6 +1,7 @@
 
 using System;
 using Avalonia.Controls;
+using Avalonia.Input;
 using BruTile.FileSystem;
 using BruTile.Predefined;
 using GBMS.Models;
@@ -11,6 +12,7 @@ using Mapsui.Extensions;
 using Mapsui.Projections;
 using Mapsui.Styles;
 using Mapsui.Tiling.Layers;
+using Mapsui.UI;
 using Mapsui.UI.Avalonia;
 using Mapsui.Widgets;
 using Mapsui.Widgets.ScaleBar;
@@ -21,9 +23,17 @@ namespace GBMS.Views.Mfd;
 
 public partial class TacticalMapView : UserControl
 {
+    private Route? _currentRoute;
+    private bool _routeCreationMode;
+
+    private int? _draggedWaypointIndex;
+    private bool _waypointDragging;
+
     const double KMInOneDegreeLat = 111.0; // approximate conversion factor for latitude degrees to kilometers
 
     private readonly TacticalSymbolLayer _tacticalSymbolLayer = new TacticalSymbolLayer();
+
+    private readonly RouteLayer _routeLayer = new RouteLayer();
 
     private TacticalMapViewModel? _viewModel;
 
@@ -40,13 +50,19 @@ public partial class TacticalMapView : UserControl
         InitialiseOnlineMap();
 
         MapControl.Map.Layers.Add(_tacticalSymbolLayer.Layer);
+        MapControl.Map.Layers.Add(_routeLayer.Layer);
+
+        MapControl.MapTapped += OnMapTapped;
+
+        MapControl.PointerPressed += OnMapPointerPressed;
+        MapControl.PointerMoved += OnMapPointerMoved;
+        MapControl.PointerReleased += OnMapPointerReleased;
 
         // Add the mouse coordinates widget to the map.
         AddMouseCoordinatesWidget();
 
         // Add the scale bar widget to the map.
         AddScaleBarWidget();
-
     }
 
     /// <summary>
@@ -113,6 +129,8 @@ public partial class TacticalMapView : UserControl
             _viewModel.ZoomLevelChanged -= OnZoomLevelChanged;
 
             _viewModel.PanRequested -= OnPanRequested;
+
+            _viewModel.RouteCreationRequested -= OnRouteCreationRequested;
         }
 
         _viewModel = DataContext as TacticalMapViewModel;
@@ -130,6 +148,8 @@ public partial class TacticalMapView : UserControl
             _viewModel.PanRequested += OnPanRequested;
 
             _viewModel.MapUpdateRequested += OnMapUpdateRequested;
+
+            _viewModel.RouteCreationRequested += OnRouteCreationRequested;
 
             UpdateOwnVehicleSymbol();
         }
@@ -347,4 +367,216 @@ public partial class TacticalMapView : UserControl
 
         MapControl.RefreshGraphics();
     }
+
+
+    /// <summary>
+    /// Handles the request to start route creation.
+    /// </summary>
+    private void OnRouteCreationRequested()
+    {
+        StartRouteCreation();
+    }
+
+    private void StartRouteCreation()
+    {
+        _currentRoute = new Route
+        {
+            Id = Guid.NewGuid(),
+            Name = "Temporary Route",
+            Created = DateTime.UtcNow,
+            Modified = DateTime.UtcNow
+        };
+
+        _routeCreationMode = true;
+    }
+    
+
+
+    /// <summary>
+    /// Handles the MapTapped event from the MapControl.
+    /// This method is called when the user taps on the map, and it adds a new waypoint to 
+    /// the current route if route creation mode is enabled.
+    /// </summary>  
+    /// <param name="sender">The source of the event.</param>
+    /// <param name="e">The event data.</param>
+    private void OnMapTapped(object? sender, MapEventArgs e)
+    {
+        if (!_routeCreationMode || _currentRoute == null)
+            return;
+
+        // Get the geographic position of the click.
+        MPoint worldPosition = e.WorldPosition;
+
+        var position = SphericalMercator.ToLonLat(
+            worldPosition.X,
+            worldPosition.Y);
+
+        var waypoint = new Waypoint
+        {
+            Latitude = position.lat,
+            Longitude = position.lon,
+            Speed = 0
+        };
+
+        _currentRoute.Waypoints.Add(waypoint);
+        _currentRoute.Modified = DateTime.UtcNow;
+
+        _routeLayer.SetRoute(_currentRoute);
+
+        MapControl.RefreshGraphics();
+
+        Logger.Information(
+            "Added waypoint to route: Lat={Latitude}, Lon={Longitude}",
+            waypoint.Latitude, waypoint.Longitude);
+    }
+
+
+    private static double CalculateDistanceKm(
+    double latitude1,
+    double longitude1,
+    double latitude2,
+    double longitude2)
+    {
+        const double earthRadiusKm = 6371.0;
+
+        double lat1 = Math.PI * latitude1 / 180.0;
+        double lat2 = Math.PI * latitude2 / 180.0;
+
+        double deltaLat = lat2 - lat1;
+        double deltaLon =
+            Math.PI * (longitude2 - longitude1) / 180.0;
+
+        double a =
+            Math.Sin(deltaLat / 2) * Math.Sin(deltaLat / 2) +
+            Math.Cos(lat1) *
+            Math.Cos(lat2) *
+            Math.Sin(deltaLon / 2) *
+            Math.Sin(deltaLon / 2);
+
+        double c =
+            2.0 * Math.Atan2(
+                Math.Sqrt(a),
+                Math.Sqrt(1.0 - a));
+
+        return earthRadiusKm * c;
+    }
+
+
+    private int? FindWaypointAtPosition(double latitude, double longitude)
+    {
+        if (_currentRoute == null)
+            return null;
+
+        // Allow a meaningful geographic area around each waypoint.
+        const double hitRadiusKm = 0.5;
+
+        for (int i = 0; i < _currentRoute.Waypoints.Count; i++)
+        {
+            var waypoint = _currentRoute.Waypoints[i];
+
+            double distanceKm = CalculateDistanceKm(
+                latitude,
+                longitude,
+                waypoint.Latitude,
+                waypoint.Longitude);
+
+            if (distanceKm <= hitRadiusKm)
+                return i;
+        }
+
+        return null;
+    }
+
+
+    private void OnMapPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!_routeCreationMode || _currentRoute == null)
+            return;
+
+        var point = e.GetCurrentPoint(MapControl);
+
+        if (!point.Properties.IsLeftButtonPressed)
+            return;
+
+        MPoint worldPosition =
+            MapControl.Map.Navigator.Viewport.ScreenToWorld(
+                point.Position.X,
+                point.Position.Y);
+
+        var lonLat = SphericalMercator.ToLonLat(
+            worldPosition.X,
+            worldPosition.Y);
+
+        int? waypointIndex = FindWaypointAtPosition(
+            lonLat.lat,
+            lonLat.lon);
+
+        if (waypointIndex == null)
+            return;
+
+        _draggedWaypointIndex = waypointIndex;
+        _waypointDragging = true;
+
+        // Take ownership of the pointer and prevent Mapsui from panning.
+        e.Pointer.Capture(MapControl);
+        MapControl.Map.Navigator.PanLock = true;
+
+        Logger.Debug(
+            "Started dragging waypoint {WaypointIndex}.", waypointIndex.Value + 1);
+    }
+
+    private void OnMapPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (!_waypointDragging ||
+            _draggedWaypointIndex == null ||
+            _currentRoute == null)
+            return;
+
+        int waypointIndex = _draggedWaypointIndex.Value;
+
+        if (waypointIndex < 0 ||
+            waypointIndex >= _currentRoute.Waypoints.Count)
+            return;
+
+        var point = e.GetCurrentPoint(MapControl);
+
+        MPoint worldPosition =
+            MapControl.Map.Navigator.Viewport.ScreenToWorld(
+                point.Position.X,
+                point.Position.Y);
+
+        var position = SphericalMercator.ToLonLat(
+            worldPosition.X,
+            worldPosition.Y);
+
+        var waypoint = _currentRoute.Waypoints[waypointIndex];
+
+        waypoint.Latitude = position.lat;
+        waypoint.Longitude = position.lon;
+
+        _currentRoute.Modified = DateTime.UtcNow;
+
+        _routeLayer.SetRoute(_currentRoute);
+
+        MapControl.RefreshGraphics();
+    }
+
+    private void OnMapPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (_waypointDragging)
+        {
+            Logger.Debug(
+                "Finished dragging waypoint {WaypointIndex}.", (_draggedWaypointIndex ?? -1) + 1);
+        }
+
+        _draggedWaypointIndex = null;
+        _waypointDragging = false;
+
+        // Always give normal map panning control back to Mapsui.
+        MapControl.Map.Navigator.PanLock = false;
+
+        // Release pointer capture.
+        e.Pointer.Capture(null);
+    }
+
 }

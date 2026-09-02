@@ -1,9 +1,10 @@
 ﻿using System;
-using Avalonia.Threading;
 using Avalonia.Controls;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using GBMS.Services;
 using GBMS.Simulation;
+using Mapsui.UI.Avalonia;
 
 namespace GBMS.ViewModels.Mfd;
 
@@ -21,6 +22,8 @@ public class TacticalMapViewModel : ObservableObject, IMfdInputReceiver
     public event Action<MapPanDirection, double>? PanRequested;
 
     public event Action? MapUpdateRequested;
+
+    public event Action? RouteCreationRequested;
 
     private readonly SimulationManager? _simManager;
 
@@ -73,6 +76,10 @@ public class TacticalMapViewModel : ObservableObject, IMfdInputReceiver
         {
             case MfdFunctionKey.L1:
                 ApplyCentreMapOnVehicle();
+                break;
+
+            case MfdFunctionKey.L2:
+                RequestRouteCreation();
                 break;
 
             case MfdFunctionKey.R1:
@@ -198,5 +205,15 @@ public class TacticalMapViewModel : ObservableObject, IMfdInputReceiver
             return;
 
         MapUpdateRequested?.Invoke();
+    }
+
+    /// <summary>
+    /// Handles the request to start route creation.
+    /// </summary>
+    private void RequestRouteCreation()
+    {
+        Logger.Debug("SA Tactical Map route creation requested.");
+
+        RouteCreationRequested?.Invoke();
     }
 }
