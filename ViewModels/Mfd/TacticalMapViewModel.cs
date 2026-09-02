@@ -1,5 +1,6 @@
 ﻿using System;
 using CommunityToolkit.Mvvm.ComponentModel;
+using GBMS.Models;
 using GBMS.Services;
 
 namespace GBMS.ViewModels.Mfd;
@@ -12,9 +13,7 @@ public class TacticalMapViewModel : ObservableObject, IMfdInputReceiver
 
     public event Action<MapPanDirection, double>? PanRequested;
 
-    // placeholder for vehicle position,  this would be dynamic
-    public double VehicleLatitude { get; } = 51.2069;
-    public double VehicleLongitude { get; } = -1.9770;
+    public OwnVehicle? OwnVehicle { get; }
 
     public enum MapPanDirection
     {
@@ -30,6 +29,16 @@ public class TacticalMapViewModel : ObservableObject, IMfdInputReceiver
 
     // Start at the 10 km zoom level.
     private int _zoomLevelIndex = 2;
+
+
+
+    public TacticalMapViewModel()
+    {
+        // assume this is temporary until we get the actual vehicle position from the simulation
+        OwnVehicle = new OwnVehicle();
+
+    }
+
 
     public void HandleFunctionKey(MfdFunctionKey key)
     {
@@ -75,9 +84,15 @@ public class TacticalMapViewModel : ObservableObject, IMfdInputReceiver
 
     private void ApplyCentreMapOnVehicle()
     {
-        Logger.Information($"Centre map on vehicle requested. Pos: {VehicleLatitude}, {VehicleLongitude}");
+        if (OwnVehicle == null)
+        {
+            Logger.Warning("Centre map on vehicle requested, but OwnVehicle is null.");
+            return;
+        }
 
-        CentreMapOnVehicleRequested?.Invoke(VehicleLatitude, VehicleLongitude);
+        Logger.Information($"Centre map on vehicle requested. Pos: {OwnVehicle.Position.Latitude}, {OwnVehicle.Position.Longitude}");
+
+        CentreMapOnVehicleRequested?.Invoke(OwnVehicle.Position.Latitude, OwnVehicle.Position.Longitude);
     }
 
     private void SelectPreviousZoomLevel()

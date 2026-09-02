@@ -9,7 +9,11 @@ public enum TacticalEntityAffiliation
     Unknown
 }
 
-public sealed class TacticalEntity
+/// <summary>
+/// Represents a tactical track on the map.
+/// Data describing a tactical entity that is to be represented on the map.
+/// </summary>
+public sealed class TacticalTrack
 {
     public TacticalEntityDefinition Definition { get; init; } = null!;
 

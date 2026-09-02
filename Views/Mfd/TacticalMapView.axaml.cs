@@ -3,20 +3,17 @@ using System;
 using Avalonia.Controls;
 using BruTile.FileSystem;
 using BruTile.Predefined;
+using GBMS.Models;
 using GBMS.Services;
 using GBMS.ViewModels.Mfd;
 using Mapsui;
 using Mapsui.Extensions;
 using Mapsui.Projections;
+using Mapsui.Styles;
 using Mapsui.Tiling.Layers;
 using Mapsui.UI.Avalonia;
-using Mapsui.Styles;
 using Mapsui.Widgets;
-using Mapsui.Widgets.InfoWidgets;
-using NetTopologySuite.Utilities;
 using Mapsui.Widgets.ScaleBar;
-using NetTopologySuite.Geometries;
-
 
 using static GBMS.ViewModels.Mfd.TacticalMapViewModel;
 
@@ -25,6 +22,8 @@ namespace GBMS.Views.Mfd;
 public partial class TacticalMapView : UserControl
 {
     const double KMInOneDegreeLat = 111.0; // approximate conversion factor for latitude degrees to kilometers
+
+    private readonly TacticalSymbolLayer _tacticalSymbolLayer = new TacticalSymbolLayer();
 
     private TacticalMapViewModel? _viewModel;
 
@@ -39,6 +38,8 @@ public partial class TacticalMapView : UserControl
 
         // InitialiseLocalCache();
         InitialiseOnlineMap();
+
+        MapControl.Map.Layers.Add(_tacticalSymbolLayer.Layer);
 
         // Add the mouse coordinates widget to the map.
         AddMouseCoordinatesWidget();
@@ -121,7 +122,10 @@ public partial class TacticalMapView : UserControl
             _viewModel.ZoomLevelChanged += OnZoomLevelChanged;
 
             _viewModel.PanRequested += OnPanRequested;
+
+            UpdateOwnVehicleSymbol();
         }
+
     }
 
 
@@ -172,6 +176,21 @@ public partial class TacticalMapView : UserControl
         MapControl.Map.Layers.Add(offlineLayer);
     }
 
+
+    private void UpdateOwnVehicleSymbol()
+    {
+        if (_viewModel == null)
+            return;
+
+        if (_viewModel.OwnVehicle == null)
+        {
+            Logger.Warning("OwnVehicle is null in ViewModel. Cannot update tactical symbol.");
+            return;
+        }
+
+        _tacticalSymbolLayer.SetOwnVehicle(_viewModel.OwnVehicle);
+    }
+
     /// <summary>
     /// Handles the CentreMapOnVehicleRequested event.
     /// This method is called whenever the ViewModel requests to centre the map on the vehicle's position.
@@ -182,8 +201,7 @@ public partial class TacticalMapView : UserControl
     {
         const double extentKm = 10.0;
 
-        Logger.Debug(
-            "SA Tactical Map centring on vehicle: Lat={Latitude}, Lon={Longitude}",
+        Logger.Debug("SA Tactical Map centring on vehicle: Lat={Latitude}, Lon={Longitude}",
             latitude, longitude);
 
         SetMapExtent(latitude, longitude, extentKm);
@@ -191,21 +209,19 @@ public partial class TacticalMapView : UserControl
 
     private void OnZoomLevelChanged(double zoomLevelKm)
     {
-        Logger.Debug(
-            "SA Tactical Map applying zoom level: {ZoomLevel} km",
+        Logger.Debug("SA Tactical Map applying zoom level: {ZoomLevel} km",
             zoomLevelKm);
 
         // For now, use the vehicle position as the centre.
-        double latitude = _viewModel?.VehicleLatitude ?? 0.0;
-        double longitude = _viewModel?.VehicleLongitude ?? 0.0;
+        double latitude = _viewModel?.OwnVehicle?.Position.Latitude ?? 0.0;
+        double longitude = _viewModel?.OwnVehicle?.Position.Longitude ?? 0.0;
 
         SetMapExtent(latitude, longitude, zoomLevelKm);
     }
 
     private void OnPanRequested(MapPanDirection direction, double distanceKm)
     {
-        Logger.Debug(
-            "SA Tactical Map applying pan: Direction={Direction}, Distance={Distance} km",
+        Logger.Debug("SA Tactical Map applying pan: Direction={Direction}, Distance={Distance} km",
             direction, distanceKm);
 
         var navigator = MapControl.Map.Navigator;
