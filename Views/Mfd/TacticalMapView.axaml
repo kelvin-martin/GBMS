@@ -3,11 +3,20 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:mapsui="clr-namespace:Mapsui.UI.Avalonia;assembly=Mapsui.UI.Avalonia"
+             xmlns:views="using:GBMS.Views.Mfd"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="GBMS.Views.Mfd.TacticalMapView">
 
     <Grid>
+        <!-- Tactical map -->
         <mapsui:MapControl x:Name="MapControl" />
+
+        <!-- Speed editing overlay -->
+        <views:SpeedEditPanel x:Name="SpeedEditPanel"
+                              IsVisible="False"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Bottom"
+                              Margin="0,0,0,24" />
 
         <!-- Tactical Map function indicators -->
         <Grid RowDefinitions="*,*,*,*,*,*"

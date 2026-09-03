@@ -32,14 +32,10 @@ public sealed class RouteEditor
     /// </summary>
     public int? DraggedWaypointIndex => _draggedWaypointIndex;
 
-    private int? _speedEditOriginalSpeed;
     private int? _selectedWaypointIndex;
 
     public int? SelectedWaypointIndex => _selectedWaypointIndex;
 
-    public bool IsSpeedEditActive =>
-        _selectedWaypointIndex != null &&
-        _speedEditOriginalSpeed != null;
 
     /// <summary>
     /// Toggles Route Creation Mode.
@@ -225,60 +221,5 @@ public sealed class RouteEditor
         Logger.Debug(
             "Adjusted speed of waypoint {WaypointIndex} by {Delta}. New speed: {NewSpeed}",
             index, delta, waypoint.Speed);
-    }
-
-    public bool BeginSpeedEdit(int index)
-    {
-        if (CurrentRoute == null)
-            return false;
-
-        if (index < 0 || index >= CurrentRoute.Waypoints.Count)
-            return false;
-
-        _selectedWaypointIndex = index;
-        _speedEditOriginalSpeed = (int)(CurrentRoute.Waypoints[index].Speed);
-
-        Logger.Debug(
-            "Began speed edit for waypoint {WaypointIndex}. Original speed: {OriginalSpeed}",
-            index,
-            _speedEditOriginalSpeed.Value);
-
-        return true;
-    }
-
-    public void AcceptSpeedEdit()
-    {
-        if (CurrentRoute == null ||
-            _selectedWaypointIndex == null)
-            return;
-
-        CurrentRoute.Modified = DateTime.UtcNow;
-
-        _speedEditOriginalSpeed = null;
-
-        Logger.Debug(
-            "Accepted speed edit for waypoint {WaypointIndex}. New speed: {NewSpeed}",
-            _selectedWaypointIndex.Value,
-            CurrentRoute.Waypoints[_selectedWaypointIndex.Value].Speed);
-    }
-
-    public void CancelSpeedEdit()
-    {
-        if (CurrentRoute == null ||
-            _selectedWaypointIndex == null ||
-            _speedEditOriginalSpeed == null)
-            return;
-
-        CurrentRoute.Waypoints[_selectedWaypointIndex.Value].Speed =
-            _speedEditOriginalSpeed.Value;
-
-        CurrentRoute.Modified = DateTime.UtcNow;
-
-        _speedEditOriginalSpeed = null;
-
-        Logger.Debug(
-            "Cancelled speed edit for waypoint {WaypointIndex}. Reverted to original speed: {OriginalSpeed}",
-            _selectedWaypointIndex.Value,
-            CurrentRoute.Waypoints[_selectedWaypointIndex.Value].Speed);
     }
 }

@@ -373,6 +373,7 @@ public partial class TacticalMapView : UserControl
         }
 
         UpdateSelectedWaypointHighlight();
+        UpdateSelectedWaypointSpeedDisplay();
         UpdateContextualIcons();
     }
 
@@ -457,6 +458,24 @@ public partial class TacticalMapView : UserControl
 
         var point = e.GetCurrentPoint(MapControl);
 
+        // Right mouse button clears the current waypoint selection.
+        if (point.Properties.IsRightButtonPressed)
+        {
+            if (_routeEditor.SelectedWaypointIndex != null)
+            {
+                _routeEditor.ClearSelection();
+
+                UpdateSelectedWaypointHighlight();
+                UpdateSelectedWaypointSpeedDisplay();
+                UpdateContextualIcons();
+
+                Logger.Debug("Waypoint selection cleared by right mouse button.");
+            }
+
+            return;
+        }
+
+        // Only process left mouse button for waypoint interaction.
         if (!point.Properties.IsLeftButtonPressed)
             return;
 
@@ -477,6 +496,8 @@ public partial class TacticalMapView : UserControl
             return;
 
         UpdateSelectedWaypointHighlight();
+        UpdateSelectedWaypointSpeedDisplay();
+        UpdateContextualIcons();
 
         if (!_routeEditor.BeginWaypointDrag(waypointIndex.Value))
             return;
@@ -565,79 +586,39 @@ public partial class TacticalMapView : UserControl
         if (!_routeEditor.IsCreationMode)
             return;
 
-        if (_routeEditor.IsSpeedEditActive)
-        {
-            HandleSpeedEditFunctionKey(key);
-            return;
-        }
+        Logger.Debug(
+            "Handling route creation function key: {FunctionKey}",
+            key);
 
-        Logger.Debug("Handling route creation function key: {FunctionKey}", key);
-
-        HandleRouteCreationFunctionKey(key);
-    }
-
-    private void HandleRouteCreationFunctionKey(string key)
-    {
         switch (key)
         {
             case "L3":
                 if (_routeEditor.SelectedWaypointIndex == null)
                     return;
 
-                _routeEditor.BeginSpeedEdit(
-                    _routeEditor.SelectedWaypointIndex.Value);
-                break;
-
-            case "L4":
-                // Reserved.
-                break;
-
-            case "L5":
-                // Reserved.
-                break;
-
-            case "L6":
-                // Reserved.
-                break;
-        }
-    }
-
-    private void HandleSpeedEditFunctionKey(string key)
-    {
-        Logger.Debug("Handling speed edit function key: {FunctionKey}", key);
-
-        switch (key)
-        {
-            case "L3":
                 _routeEditor.AdjustSelectedWaypointSpeed(+1);
+
                 _routeLayer.SetRoute(_routeEditor.CurrentRoute!);
+                UpdateSelectedWaypointSpeedDisplay();
                 MapControl.RefreshGraphics();
                 break;
 
             case "L4":
+                if (_routeEditor.SelectedWaypointIndex == null)
+                    return;
+
                 _routeEditor.AdjustSelectedWaypointSpeed(-1);
+
                 _routeLayer.SetRoute(_routeEditor.CurrentRoute!);
+                UpdateSelectedWaypointSpeedDisplay();
                 MapControl.RefreshGraphics();
                 break;
 
             case "L5":
-                _routeEditor.AcceptSpeedEdit();
-                _routeLayer.SetRoute(_routeEditor.CurrentRoute!);
-                _routeEditor.ClearSelection();
-                UpdateSelectedWaypointHighlight();
-                MapControl.RefreshGraphics();
-                break;
-
             case "L6":
-                _routeEditor.CancelSpeedEdit();
-                _routeLayer.SetRoute(_routeEditor.CurrentRoute!);
-                _routeEditor.ClearSelection();
-                UpdateSelectedWaypointHighlight();
-                MapControl.RefreshGraphics();
+                // Currently unused in Route Creation.
                 break;
         }
-
-        UpdateContextualIcons();
     }
 
     /// <summary>
@@ -645,13 +626,15 @@ public partial class TacticalMapView : UserControl
     /// </summary>
     private void UpdateContextualIcons()
     {
-        bool speedEditActive = _routeEditor.IsSpeedEditActive;
+        bool waypointSelected =
+            _routeEditor.SelectedWaypointIndex != null;
 
-        // L3-L6 are only available during Speed Edit.
-        L3ContextIcon.IsVisible = speedEditActive;
-        L4ContextIcon.IsVisible = speedEditActive;
-        L5ContextIcon.IsVisible = speedEditActive;
-        L6ContextIcon.IsVisible = speedEditActive;
+        L3ContextIcon.IsVisible = waypointSelected;
+        L4ContextIcon.IsVisible = waypointSelected;
+
+        // L5 and L6 currently have no function.
+        L5ContextIcon.IsVisible = false;
+        L6ContextIcon.IsVisible = false;
     }
 
     /// <summary>
@@ -710,6 +693,26 @@ public partial class TacticalMapView : UserControl
         _selectedWaypointLayer.Features = [feature];
 
         MapControl.RefreshGraphics();
+    }
+
+    private void UpdateSelectedWaypointSpeedDisplay()
+    {
+        int? selectedIndex = _routeEditor.SelectedWaypointIndex;
+
+        if (selectedIndex == null ||
+            _routeEditor.CurrentRoute == null ||
+            selectedIndex.Value < 0 ||
+            selectedIndex.Value >= _routeEditor.CurrentRoute.Waypoints.Count)
+        {
+            SpeedEditPanel.IsVisible = false;
+            return;
+        }
+
+        var waypoint =
+            _routeEditor.CurrentRoute.Waypoints[selectedIndex.Value];
+
+        SpeedEditPanel.Speed = (int) waypoint.Speed;
+        SpeedEditPanel.IsVisible = true;
     }
 
 }
