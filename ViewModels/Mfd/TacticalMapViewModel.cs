@@ -25,6 +25,8 @@ public class TacticalMapViewModel : ObservableObject, IMfdInputReceiver
 
     public event Action? RouteCreationRequested;
 
+    public event Action<string>? FunctionKeyRequested;
+
     private readonly SimulationManager? _simManager;
 
     private readonly DispatcherTimer? _simulationStateTimer;
@@ -70,8 +72,6 @@ public class TacticalMapViewModel : ObservableObject, IMfdInputReceiver
     /// <param name="key">The function key that was pressed.</param>
     public void HandleFunctionKey(MfdFunctionKey key)
     {
-        Logger.Debug("SA Tactical Map received function key: {FunctionKey}", key);
-
         switch (key)
         {
             case MfdFunctionKey.L1:
@@ -80,6 +80,13 @@ public class TacticalMapViewModel : ObservableObject, IMfdInputReceiver
 
             case MfdFunctionKey.L2:
                 RequestRouteCreation();
+                break;
+
+            case MfdFunctionKey.L3:
+            case MfdFunctionKey.L4:
+            case MfdFunctionKey.L5: 
+            case MfdFunctionKey.L6:
+                FunctionKeyRequested?.Invoke(key.ToString());
                 break;
 
             case MfdFunctionKey.R1:
@@ -216,4 +223,6 @@ public class TacticalMapViewModel : ObservableObject, IMfdInputReceiver
 
         RouteCreationRequested?.Invoke();
     }
+
+
 }

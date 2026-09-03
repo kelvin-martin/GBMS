@@ -14,6 +14,7 @@
               IsHitTestVisible="False">
 
             <!-- Route Creation function indicator -->
+            
             <Border Grid.Row="1" x:Name="RouteCreationIndicator"
                     Width="64"
                     Height="64"
@@ -21,13 +22,13 @@
                     VerticalAlignment="Top"
                     Margin="4,0,0,0"
                     BorderBrush="#70C070"
-                    BorderThickness="3"
+                    BorderThickness="1"
                     Background="Transparent"
                     IsVisible="True">
 
                 <Image x:Name="RouteCreationIcon"
-                       Width="24"
-                       Height="24"
+                       Width="64"
+                       Height="64"
                        HorizontalAlignment="Center"
                        VerticalAlignment="Center"
                        Source="/Assets/Icons/route_creation.png"/>

@@ -95,8 +95,7 @@ public partial class MfdViewModel : ObservableObject
         UpdateCurrentContentViewModel();
     }
 
-    public bool IsNavigationEnabled =>
-        CurrentFunctionalArea != MfdFunctionalArea.None;
+    public bool IsNavigationEnabled => CurrentFunctionalArea != MfdFunctionalArea.None;
 
     [ObservableProperty]
     private MfdFunctionalArea _currentFunctionalArea = MfdFunctionalArea.None;
@@ -160,8 +159,6 @@ public partial class MfdViewModel : ObservableObject
 
     public void HandleFunctionKey(MfdFunctionKey key)
     {
-        Logger.Debug("MFD function key received: {FunctionKey}", key);
-
         if (CurrentContentViewModel is IMfdInputReceiver receiver)
         {
             receiver.HandleFunctionKey(key);

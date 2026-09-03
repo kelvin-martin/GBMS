@@ -4,17 +4,16 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
-using BruTile.FileSystem;
-using BruTile.Predefined;
 using GBMS.Models;
 using GBMS.Services;
 using GBMS.ViewModels.Mfd;
+using BruTile.FileSystem;
+using BruTile.Predefined;
 using Mapsui;
 using Mapsui.Extensions;
 using Mapsui.Projections;
 using Mapsui.Styles;
 using Mapsui.Tiling.Layers;
-using Mapsui.UI;
 using Mapsui.UI.Avalonia;
 using Mapsui.Widgets;
 using Mapsui.Widgets.ScaleBar;
@@ -23,16 +22,15 @@ using static GBMS.ViewModels.Mfd.TacticalMapViewModel;
 
 namespace GBMS.Views.Mfd;
 
+/// <summary>
+/// Interaction logic for TacticalMapView.xaml
+/// </summary>
 public partial class TacticalMapView : UserControl
 {
-    private Route? _currentRoute;
-    private bool _routeCreationMode;
+    // private bool _routeCreationMode;
 
     private readonly Bitmap _routeCreationIcon;
     private readonly Bitmap _routeCreationActiveIcon;
-
-    private int? _draggedWaypointIndex;
-    private bool _waypointDragging;
 
     const double KMInOneDegreeLat = 111.0; // approximate conversion factor for latitude degrees to kilometers
 
@@ -41,6 +39,10 @@ public partial class TacticalMapView : UserControl
     private readonly RouteLayer _routeLayer = new RouteLayer();
 
     private TacticalMapViewModel? _viewModel;
+
+    private readonly RouteEditor _routeEditor;
+
+    private bool _waypointInteraction;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TacticalMapView"/> class.
@@ -62,6 +64,9 @@ public partial class TacticalMapView : UserControl
         MapControl.PointerPressed += OnMapPointerPressed;
         MapControl.PointerMoved += OnMapPointerMoved;
         MapControl.PointerReleased += OnMapPointerReleased;
+
+        _routeEditor = new RouteEditor();
+        _routeEditor.CreationModeChanged += OnRouteCreationModeChanged;
 
         _routeCreationIcon = new Bitmap(AssetLoader.Open(
         new Uri("avares://GBMS/Assets/Icons/route_creation.png")));
@@ -136,12 +141,11 @@ public partial class TacticalMapView : UserControl
         if (_viewModel != null)
         {
             _viewModel.CentreMapOnVehicleRequested -= OnCentreMapOnVehicleRequested;
-
             _viewModel.ZoomLevelChanged -= OnZoomLevelChanged;
-
             _viewModel.PanRequested -= OnPanRequested;
-
+            _viewModel.MapUpdateRequested -= OnMapUpdateRequested;
             _viewModel.RouteCreationRequested -= OnRouteCreationRequested;
+            _viewModel.FunctionKeyRequested -= HandleFunctionKey;
         }
 
         _viewModel = DataContext as TacticalMapViewModel;
@@ -153,14 +157,11 @@ public partial class TacticalMapView : UserControl
                 _viewModel.GetType().Name);
 
             _viewModel.CentreMapOnVehicleRequested += OnCentreMapOnVehicleRequested;
-
             _viewModel.ZoomLevelChanged += OnZoomLevelChanged;
-
             _viewModel.PanRequested += OnPanRequested;
-
             _viewModel.MapUpdateRequested += OnMapUpdateRequested;
-
             _viewModel.RouteCreationRequested += OnRouteCreationRequested;
+            _viewModel.FunctionKeyRequested += HandleFunctionKey;
 
             UpdateOwnVehicleSymbol();
         }
@@ -361,8 +362,7 @@ public partial class TacticalMapView : UserControl
             maxLongitude, maxLatitude);
 
         var box = new MRect(
-            min.x, min.y,
-            max.x, max.y);
+            min.x, min.y, max.x, max.y);
 
         MapControl.Map.Navigator?.ZoomToBox(
             box, MBoxFit.Fit);
@@ -379,41 +379,12 @@ public partial class TacticalMapView : UserControl
         MapControl.RefreshGraphics();
     }
 
-
     /// <summary>
     /// Handles the request to start route creation.
     /// </summary>
     private void OnRouteCreationRequested()
     {
-        ToggleRouteCreation();
-    }
-
-    private void StartRouteCreation()
-    {
-        _currentRoute = new Route
-        {
-            Id = Guid.NewGuid(),
-            Name = "Temporary Route",
-            Created = DateTime.UtcNow,
-            Modified = DateTime.UtcNow
-        };
-
-        _routeCreationMode = true;
-
-        UpdateRouteCreationIcon();
-    }
-
-    private void ToggleRouteCreation()
-    {
-        if (_routeCreationMode)
-        {
-            _routeCreationMode = false;
-            UpdateRouteCreationIcon();
-
-            return;
-        }
-
-        StartRouteCreation();
+        _routeEditor.ToggleCreationMode();
     }
 
     /// <summary>
@@ -425,35 +396,46 @@ public partial class TacticalMapView : UserControl
     /// <param name="e">The event data.</param>
     private void OnMapTapped(object? sender, MapEventArgs e)
     {
-        if (!_routeCreationMode || _currentRoute == null)
+        if (!_routeEditor.IsCreationMode)
             return;
 
-        // Get the geographic position of the click.
+        if (_routeEditor.CurrentRoute == null)
+            return;
+
+        // A pointer interaction with an existing waypoint
+        // must not also create a new waypoint.
+        if (_waypointInteraction)
+        {
+            _waypointInteraction = false;
+            return;
+        }
+
+        // Get the geographic position of the tap.
         MPoint worldPosition = e.WorldPosition;
 
         var position = SphericalMercator.ToLonLat(
-            worldPosition.X,
-            worldPosition.Y);
+            worldPosition.X, worldPosition.Y);
 
-        var waypoint = new Waypoint
-        {
-            Latitude = position.lat,
-            Longitude = position.lon,
-            Speed = 0
-        };
+        Waypoint waypoint = _routeEditor.AddWaypoint(
+            position.lat, position.lon);
 
-        _currentRoute.Waypoints.Add(waypoint);
-        _currentRoute.Modified = DateTime.UtcNow;
-
-        _routeLayer.SetRoute(_currentRoute);
+        _routeLayer.SetRoute(_routeEditor.CurrentRoute);
 
         MapControl.RefreshGraphics();
 
         Logger.Information(
-            "Added waypoint to route: Lat={Latitude}, Lon={Longitude}",
-            waypoint.Latitude, waypoint.Longitude);
+            "Added waypoint to route: Lat={Latitude}, Lon={Longitude}, Speed={Speed} km/h",
+            waypoint.Latitude, waypoint.Longitude, waypoint.Speed);
     }
 
+    /// <summary>
+    /// Calculates the distance between two geographic coordinates using the Haversine formula.
+    /// </summary>
+    /// <param name="latitude1">The latitude of the first point in degrees.</param>
+    /// <param name="longitude1">The longitude of the first point in degrees.</param>
+    /// <param name="latitude2">The latitude of the second point in degrees.</param>
+    /// <param name="longitude2">The longitude of the second point in degrees.</param>
+    /// <returns>The distance between the two points in kilometers.</returns>
     private static double CalculateDistanceKm(double latitude1, double longitude1,
             double latitude2, double longitude2)
     {
@@ -463,42 +445,41 @@ public partial class TacticalMapView : UserControl
         double lat2 = Math.PI * latitude2 / 180.0;
 
         double deltaLat = lat2 - lat1;
-        double deltaLon =
-            Math.PI * (longitude2 - longitude1) / 180.0;
+        double deltaLon = Math.PI * (longitude2 - longitude1) / 180.0;
 
         double a =
             Math.Sin(deltaLat / 2) * Math.Sin(deltaLat / 2) +
-            Math.Cos(lat1) *
-            Math.Cos(lat2) *
-            Math.Sin(deltaLon / 2) *
-            Math.Sin(deltaLon / 2);
+            Math.Cos(lat1) * Math.Cos(lat2) *
+            Math.Sin(deltaLon / 2) * Math.Sin(deltaLon / 2);
 
         double c =
             2.0 * Math.Atan2(
-                Math.Sqrt(a),
-                Math.Sqrt(1.0 - a));
+                Math.Sqrt(a), Math.Sqrt(1.0 - a));
 
         return earthRadiusKm * c;
     }
 
-
+    /// <summary>
+    /// Finds the index of a waypoint at the specified geographic position.
+    /// </summary>
+    /// <param name="latitude">The latitude of the position in degrees.</param>
+    /// <param name="longitude">The longitude of the position in degrees.</param>
+    /// <returns>The index of the waypoint if found; otherwise, null.</returns>
     private int? FindWaypointAtPosition(double latitude, double longitude)
     {
-        if (_currentRoute == null)
+        if (_routeEditor.CurrentRoute == null)
             return null;
 
         // Allow a meaningful geographic area around each waypoint.
         const double hitRadiusKm = 0.5;
 
-        for (int i = 0; i < _currentRoute.Waypoints.Count; i++)
+        for (int i = 0; i < _routeEditor.CurrentRoute.Waypoints.Count; i++)
         {
-            var waypoint = _currentRoute.Waypoints[i];
+            var waypoint = _routeEditor.CurrentRoute.Waypoints[i];
 
             double distanceKm = CalculateDistanceKm(
-                latitude,
-                longitude,
-                waypoint.Latitude,
-                waypoint.Longitude);
+                latitude, longitude,
+                waypoint.Latitude, waypoint.Longitude);
 
             if (distanceKm <= hitRadiusKm)
                 return i;
@@ -507,10 +488,15 @@ public partial class TacticalMapView : UserControl
         return null;
     }
 
-
+    /// <summary>
+    /// Handles the PointerPressed event on the map control.
+    /// </summary>
+    /// <param name="sender">The source of the event.</param>
+    /// <param name="e">The event data.</param>
     private void OnMapPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (!_routeCreationMode || _currentRoute == null)
+        if (!_routeEditor.IsCreationMode ||
+            _routeEditor.CurrentRoute == null)
             return;
 
         var point = e.GetCurrentPoint(MapControl);
@@ -520,88 +506,174 @@ public partial class TacticalMapView : UserControl
 
         MPoint worldPosition =
             MapControl.Map.Navigator.Viewport.ScreenToWorld(
-                point.Position.X,
-                point.Position.Y);
+                point.Position.X, point.Position.Y);
 
         var lonLat = SphericalMercator.ToLonLat(
-            worldPosition.X,
-            worldPosition.Y);
+            worldPosition.X, worldPosition.Y);
 
         int? waypointIndex = FindWaypointAtPosition(
-            lonLat.lat,
-            lonLat.lon);
+            lonLat.lat, lonLat.lon);
 
         if (waypointIndex == null)
             return;
 
-        _draggedWaypointIndex = waypointIndex;
-        _waypointDragging = true;
 
-        // Take ownership of the pointer and prevent Mapsui from panning.
+        if (!_routeEditor.SelectWaypoint(waypointIndex.Value))
+            return;
+
+        if (!_routeEditor.BeginWaypointDrag(waypointIndex.Value))
+            return;
+
+        _waypointInteraction = true;
+
+        // Take ownership of the pointer and prevent Mapsui
+        // from panning the map while dragging the waypoint.
         e.Pointer.Capture(MapControl);
         MapControl.Map.Navigator.PanLock = true;
 
+
         Logger.Debug(
-            "Started dragging waypoint {WaypointIndex}.", waypointIndex.Value + 1);
+            "Started dragging waypoint {WaypointIndex}.",
+            waypointIndex.Value + 1);
     }
 
+    /// <summary>
+    /// Handles the PointerMoved event on the map control.
+    /// </summary>
+    /// <param name="sender">The source of the event.</param>
+    /// <param name="e">The event data.</param>
     private void OnMapPointerMoved(object? sender, PointerEventArgs e)
     {
-        if (!_waypointDragging ||
-            _draggedWaypointIndex == null ||
-            _currentRoute == null)
+        if (_routeEditor.DraggedWaypointIndex == null)
             return;
 
-        int waypointIndex = _draggedWaypointIndex.Value;
-
-        if (waypointIndex < 0 ||
-            waypointIndex >= _currentRoute.Waypoints.Count)
+        if (_routeEditor.CurrentRoute == null)
             return;
 
         var point = e.GetCurrentPoint(MapControl);
 
         MPoint worldPosition =
             MapControl.Map.Navigator.Viewport.ScreenToWorld(
-                point.Position.X,
-                point.Position.Y);
+                point.Position.X, point.Position.Y);
 
         var position = SphericalMercator.ToLonLat(
-            worldPosition.X,
-            worldPosition.Y);
+            worldPosition.X, worldPosition.Y);
 
-        var waypoint = _currentRoute.Waypoints[waypointIndex];
+        _routeEditor.MoveDraggedWaypoint(
+            position.lat, position.lon);
 
-        waypoint.Latitude = position.lat;
-        waypoint.Longitude = position.lon;
-
-        _currentRoute.Modified = DateTime.UtcNow;
-
-        _routeLayer.SetRoute(_currentRoute);
+        _routeLayer.SetRoute(_routeEditor.CurrentRoute);
 
         MapControl.RefreshGraphics();
     }
 
+    /// <summary>
+    /// Handles the PointerReleased event on the map control.
+    /// </summary>
+    /// <param name="sender">The source of the event.</param>
+    /// <param name="e">The event data.</param>
     private void OnMapPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
-        if (_waypointDragging)
+        if (_routeEditor.DraggedWaypointIndex != null)
         {
             Logger.Debug(
-                "Finished dragging waypoint {WaypointIndex}.", (_draggedWaypointIndex ?? -1) + 1);
+                "Finished dragging waypoint {WaypointIndex}.",
+                _routeEditor.DraggedWaypointIndex.Value + 1);
         }
 
-        _draggedWaypointIndex = null;
-        _waypointDragging = false;
+        _routeEditor.EndWaypointDrag();
 
-        // Always give normal map panning control back to Mapsui.
+        // Give normal map panning control back to Mapsui.
         MapControl.Map.Navigator.PanLock = false;
 
         // Release pointer capture.
         e.Pointer.Capture(null);
     }
 
-    private void UpdateRouteCreationIcon()
+    /// <summary>
+    /// Handles changes to the route creation mode.
+    /// </summary>
+    /// <param name="active">Indicates whether route creation mode is active.</param>
+    private void OnRouteCreationModeChanged(bool active)
     {
         RouteCreationIcon.Source =
-            _routeCreationMode ? _routeCreationActiveIcon : _routeCreationIcon;
+            active ? _routeCreationActiveIcon : _routeCreationIcon;
     }
+
+    private void HandleFunctionKey(string key)
+    {
+        if (!_routeEditor.IsCreationMode)
+            return;
+
+        if (_routeEditor.IsSpeedEditActive)
+        {
+            HandleSpeedEditFunctionKey(key);
+            return;
+        }
+
+        Logger.Debug("Handling route creation function key: {FunctionKey}", key);
+
+        HandleRouteCreationFunctionKey(key);
+    }
+
+    private void HandleRouteCreationFunctionKey(string key)
+    {
+
+        switch (key)
+        {
+            case "L3":
+                if (_routeEditor.SelectedWaypointIndex == null)
+                    return;
+
+                _routeEditor.BeginSpeedEdit(
+                    _routeEditor.SelectedWaypointIndex.Value);
+                break;
+
+            case "L4":
+                // Reserved.
+                break;
+
+            case "L5":
+                // Reserved.
+                break;
+
+            case "L6":
+                // Reserved.
+                break;
+        }
+    }
+
+    private void HandleSpeedEditFunctionKey(string key)
+    {
+        Logger.Debug("Handling speed edit function key: {FunctionKey}", key);
+
+        switch (key)
+        {
+            case "L3":
+                _routeEditor.AdjustSelectedWaypointSpeed(+1);
+
+                _routeLayer.SetRoute(_routeEditor.CurrentRoute!);
+                MapControl.RefreshGraphics();
+                break;
+
+            case "L4":
+                _routeEditor.AdjustSelectedWaypointSpeed(-1);
+
+                _routeLayer.SetRoute(_routeEditor.CurrentRoute!);
+                MapControl.RefreshGraphics();
+                break;
+
+            case "L5":
+                _routeEditor.AcceptSpeedEdit();
+                break;
+
+            case "L6":
+                _routeEditor.CancelSpeedEdit();
+
+                _routeLayer.SetRoute(_routeEditor.CurrentRoute!);
+                MapControl.RefreshGraphics();
+                break;
+        }
+    }
+
 }

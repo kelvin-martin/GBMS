@@ -207,31 +207,37 @@
                 <Button Grid.Row="0"
                         Content="L1"
                         Classes="MfdKey"
+                        Height="64"
                         Click="OnL1Click"/>
 
                 <Button Grid.Row="1"
                         Content="L2"
                         Classes="MfdKey"
+                        Height="64"
                         Click="OnL2Click"/>
 
                 <Button Grid.Row="2"
                         Content="L3"
                         Classes="MfdKey"
+                        Height="64"
                         Click="OnL3Click"/>
 
                 <Button Grid.Row="3"
                         Content="L4"
                         Classes="MfdKey"
+                        Height="64"
                         Click="OnL4Click"/>
 
                 <Button Grid.Row="4"
                         Content="L5"
                         Classes="MfdKey"
+                        Height="64"
                         Click="OnL5Click"/>
 
                 <Button Grid.Row="5"
                         Content="L6"
                         Classes="MfdKey"
+                        Height="64"
                         Click="OnL6Click"/>
 
             </Grid>
@@ -343,31 +349,37 @@
                 <Button Grid.Row="0"
                         Content="R1"
                         Classes="MfdKey"
+                        Height="64"
                         Click="OnR1Click"/>
 
                 <Button Grid.Row="1"
                         Content="R2"
                         Classes="MfdKey"
+                        Height="64"
                         Click="OnR2Click"/>
 
                 <Button Grid.Row="2"
                         Content="R3"
                         Classes="MfdKey"
+                        Height="64"
                         Click="OnR3Click"/>
 
                 <Button Grid.Row="3"
                         Content="R4"
                         Classes="MfdKey"
+                        Height="64"
                         Click="OnR4Click"/>
 
                 <Button Grid.Row="4"
                         Content="R5"
                         Classes="MfdKey"
+                        Height="64"
                         Click="OnR5Click"/>
 
                 <Button Grid.Row="5"
                         Content="R6"
                         Classes="MfdKey"
+                        Height="64"
                         Click="OnR6Click"/>
 
             </Grid>
