@@ -1,23 +1,27 @@
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using BruTile.FileSystem;
+using BruTile.Predefined;
 using GBMS.Models;
 using GBMS.Services;
 using GBMS.ViewModels.Mfd;
-using BruTile.FileSystem;
-using BruTile.Predefined;
 using Mapsui;
 using Mapsui.Extensions;
+using Mapsui.Layers;
+using Mapsui.Nts;
 using Mapsui.Projections;
 using Mapsui.Styles;
 using Mapsui.Tiling.Layers;
 using Mapsui.UI.Avalonia;
 using Mapsui.Widgets;
 using Mapsui.Widgets.ScaleBar;
-
+using NetTopologySuite.Geometries;
 using static GBMS.ViewModels.Mfd.TacticalMapViewModel;
 
 namespace GBMS.Views.Mfd;
@@ -32,10 +36,8 @@ public partial class TacticalMapView : UserControl
     private readonly Bitmap _routeCreationIcon;
     private readonly Bitmap _routeCreationActiveIcon;
 
-    const double KMInOneDegreeLat = 111.0; // approximate conversion factor for latitude degrees to kilometers
-
     private readonly TacticalSymbolLayer _tacticalSymbolLayer = new TacticalSymbolLayer();
-
+    private readonly MemoryLayer _selectedWaypointLayer = new MemoryLayer();
     private readonly RouteLayer _routeLayer = new RouteLayer();
 
     private TacticalMapViewModel? _viewModel;
@@ -58,6 +60,7 @@ public partial class TacticalMapView : UserControl
 
         MapControl.Map.Layers.Add(_tacticalSymbolLayer.Layer);
         MapControl.Map.Layers.Add(_routeLayer.Layer);
+        MapControl.Map.Layers.Add(_selectedWaypointLayer);
 
         MapControl.MapTapped += OnMapTapped;
 
@@ -74,10 +77,7 @@ public partial class TacticalMapView : UserControl
         _routeCreationActiveIcon = new Bitmap(AssetLoader.Open(
                 new Uri("avares://GBMS/Assets/Icons/route_creation_active.png")));
 
-        // Add the mouse coordinates widget to the map.
         AddMouseCoordinatesWidget();
-
-        // Add the scale bar widget to the map.
         AddScaleBarWidget();
     }
 
@@ -165,7 +165,6 @@ public partial class TacticalMapView : UserControl
 
             UpdateOwnVehicleSymbol();
         }
-
     }
 
     /// <summary>
@@ -305,10 +304,10 @@ public partial class TacticalMapView : UserControl
 
         // Convert the requested ground distance into
         // latitude/longitude offsets.
-        double latitudeOffset = distanceKm / KMInOneDegreeLat;
+        double latitudeOffset = distanceKm / Mapping.KMInOneDegreeLat1;
 
         double longitudeOffset =
-            distanceKm / (KMInOneDegreeLat * Math.Cos(latitude * Math.PI / 180.0));
+            distanceKm / (Mapping.KMInOneDegreeLat1 * Math.Cos(latitude * Math.PI / 180.0));
 
         switch (direction)
         {
@@ -344,25 +343,7 @@ public partial class TacticalMapView : UserControl
     /// <param name="extentKm">The extent of the map in kilometers.</param>
     private void SetMapExtent(double latitude, double longitude, double extentKm)
     {
-        double latitudeOffset = extentKm / KMInOneDegreeLat;
-
-        double longitudeOffset =
-            extentKm / (KMInOneDegreeLat * Math.Cos(latitude * Math.PI / 180.0));
-
-        double minLatitude = latitude - latitudeOffset;
-        double maxLatitude = latitude + latitudeOffset;
-
-        double minLongitude = longitude - longitudeOffset;
-        double maxLongitude = longitude + longitudeOffset;
-
-        var min = SphericalMercator.FromLonLat(
-            minLongitude, minLatitude);
-
-        var max = SphericalMercator.FromLonLat(
-            maxLongitude, maxLatitude);
-
-        var box = new MRect(
-            min.x, min.y, max.x, max.y);
+        var box = Mapping.CalculateMapExtent(latitude, longitude, extentKm);
 
         MapControl.Map.Navigator?.ZoomToBox(
             box, MBoxFit.Fit);
@@ -375,16 +356,24 @@ public partial class TacticalMapView : UserControl
     private void OnMapUpdateRequested()
     {
         UpdateOwnVehicleSymbol();
-
         MapControl.RefreshGraphics();
     }
 
     /// <summary>
     /// Handles the request to start route creation.
+    /// This method toggles the route creation mode in the RouteEditor and updates the map accordingly.
     /// </summary>
     private void OnRouteCreationRequested()
     {
         _routeEditor.ToggleCreationMode();
+
+        if (!_routeEditor.IsCreationMode)
+        {
+            _routeEditor.ClearSelection();
+        }
+
+        UpdateSelectedWaypointHighlight();
+        UpdateContextualIcons();
     }
 
     /// <summary>
@@ -416,47 +405,14 @@ public partial class TacticalMapView : UserControl
         var position = SphericalMercator.ToLonLat(
             worldPosition.X, worldPosition.Y);
 
-        Waypoint waypoint = _routeEditor.AddWaypoint(
-            position.lat, position.lon);
+        Waypoint waypoint = _routeEditor.AddWaypoint(position.lat, position.lon);
 
         _routeLayer.SetRoute(_routeEditor.CurrentRoute);
 
         MapControl.RefreshGraphics();
 
-        Logger.Information(
-            "Added waypoint to route: Lat={Latitude}, Lon={Longitude}, Speed={Speed} km/h",
+        Logger.Information("Added waypoint to route: Lat={Latitude}, Lon={Longitude}, Speed={Speed} km/h",
             waypoint.Latitude, waypoint.Longitude, waypoint.Speed);
-    }
-
-    /// <summary>
-    /// Calculates the distance between two geographic coordinates using the Haversine formula.
-    /// </summary>
-    /// <param name="latitude1">The latitude of the first point in degrees.</param>
-    /// <param name="longitude1">The longitude of the first point in degrees.</param>
-    /// <param name="latitude2">The latitude of the second point in degrees.</param>
-    /// <param name="longitude2">The longitude of the second point in degrees.</param>
-    /// <returns>The distance between the two points in kilometers.</returns>
-    private static double CalculateDistanceKm(double latitude1, double longitude1,
-            double latitude2, double longitude2)
-    {
-        const double earthRadiusKm = 6371.0;
-
-        double lat1 = Math.PI * latitude1 / 180.0;
-        double lat2 = Math.PI * latitude2 / 180.0;
-
-        double deltaLat = lat2 - lat1;
-        double deltaLon = Math.PI * (longitude2 - longitude1) / 180.0;
-
-        double a =
-            Math.Sin(deltaLat / 2) * Math.Sin(deltaLat / 2) +
-            Math.Cos(lat1) * Math.Cos(lat2) *
-            Math.Sin(deltaLon / 2) * Math.Sin(deltaLon / 2);
-
-        double c =
-            2.0 * Math.Atan2(
-                Math.Sqrt(a), Math.Sqrt(1.0 - a));
-
-        return earthRadiusKm * c;
     }
 
     /// <summary>
@@ -477,7 +433,7 @@ public partial class TacticalMapView : UserControl
         {
             var waypoint = _routeEditor.CurrentRoute.Waypoints[i];
 
-            double distanceKm = CalculateDistanceKm(
+            double distanceKm = Mapping.CalculateDistanceKm(
                 latitude, longitude,
                 waypoint.Latitude, waypoint.Longitude);
 
@@ -517,9 +473,10 @@ public partial class TacticalMapView : UserControl
         if (waypointIndex == null)
             return;
 
-
         if (!_routeEditor.SelectWaypoint(waypointIndex.Value))
             return;
+
+        UpdateSelectedWaypointHighlight();
 
         if (!_routeEditor.BeginWaypointDrag(waypointIndex.Value))
             return;
@@ -530,7 +487,6 @@ public partial class TacticalMapView : UserControl
         // from panning the map while dragging the waypoint.
         e.Pointer.Capture(MapControl);
         MapControl.Map.Navigator.PanLock = true;
-
 
         Logger.Debug(
             "Started dragging waypoint {WaypointIndex}.",
@@ -562,6 +518,8 @@ public partial class TacticalMapView : UserControl
         _routeEditor.MoveDraggedWaypoint(
             position.lat, position.lon);
 
+        UpdateSelectedWaypointHighlight();
+
         _routeLayer.SetRoute(_routeEditor.CurrentRoute);
 
         MapControl.RefreshGraphics();
@@ -582,6 +540,8 @@ public partial class TacticalMapView : UserControl
         }
 
         _routeEditor.EndWaypointDrag();
+
+        UpdateSelectedWaypointHighlight();
 
         // Give normal map panning control back to Mapsui.
         MapControl.Map.Navigator.PanLock = false;
@@ -618,7 +578,6 @@ public partial class TacticalMapView : UserControl
 
     private void HandleRouteCreationFunctionKey(string key)
     {
-
         switch (key)
         {
             case "L3":
@@ -651,29 +610,106 @@ public partial class TacticalMapView : UserControl
         {
             case "L3":
                 _routeEditor.AdjustSelectedWaypointSpeed(+1);
-
                 _routeLayer.SetRoute(_routeEditor.CurrentRoute!);
                 MapControl.RefreshGraphics();
                 break;
 
             case "L4":
                 _routeEditor.AdjustSelectedWaypointSpeed(-1);
-
                 _routeLayer.SetRoute(_routeEditor.CurrentRoute!);
                 MapControl.RefreshGraphics();
                 break;
 
             case "L5":
                 _routeEditor.AcceptSpeedEdit();
+                _routeLayer.SetRoute(_routeEditor.CurrentRoute!);
+                _routeEditor.ClearSelection();
+                UpdateSelectedWaypointHighlight();
+                MapControl.RefreshGraphics();
                 break;
 
             case "L6":
                 _routeEditor.CancelSpeedEdit();
-
                 _routeLayer.SetRoute(_routeEditor.CurrentRoute!);
+                _routeEditor.ClearSelection();
+                UpdateSelectedWaypointHighlight();
                 MapControl.RefreshGraphics();
                 break;
         }
+
+        UpdateContextualIcons();
+    }
+
+    /// <summary>
+    /// Updates the visibility of contextual icons based on the current state of the RouteEditor.
+    /// </summary>
+    private void UpdateContextualIcons()
+    {
+        bool speedEditActive = _routeEditor.IsSpeedEditActive;
+
+        // L3-L6 are only available during Speed Edit.
+        L3ContextIcon.IsVisible = speedEditActive;
+        L4ContextIcon.IsVisible = speedEditActive;
+        L5ContextIcon.IsVisible = speedEditActive;
+        L6ContextIcon.IsVisible = speedEditActive;
+    }
+
+    /// <summary>
+    /// Updates the highlight for the selected waypoint on the map.
+    /// </summary>
+    private void UpdateSelectedWaypointHighlight()
+    {
+        _selectedWaypointLayer.Features = [];
+
+        if (_routeEditor.CurrentRoute == null)
+            return;
+
+        int? selectedIndex = _routeEditor.SelectedWaypointIndex;
+
+        if (selectedIndex == null)
+            return;
+
+        if (selectedIndex.Value < 0 ||
+            selectedIndex.Value >= _routeEditor.CurrentRoute.Waypoints.Count)
+            return;
+
+        Waypoint waypoint =
+            _routeEditor.CurrentRoute.Waypoints[selectedIndex.Value];
+
+        // Create a small geodesic selection halo around
+        // the selected waypoint.
+        List<MPoint> points = Mapping.CreateGeodesicCircle(
+            waypoint.Latitude, waypoint.Longitude,
+            0.25);       // 250 metres
+
+        var coordinates = points
+            .Select(p => new Coordinate(p.X, p.Y)).ToList();
+
+        // Close the polygon ring.
+        if (coordinates.Count > 0 &&
+            !coordinates[0].Equals2D(coordinates[^1]))
+        {
+            coordinates.Add(coordinates[0]);
+        }
+
+        var ring = new LinearRing(coordinates.ToArray());
+
+        var polygon = new Polygon(ring);
+
+        var feature = new GeometryFeature(polygon);
+
+        feature.Styles.Add(
+            new VectorStyle
+            {
+                Fill = null,
+                Outline = new Pen(
+                    Color.Green,
+                    3)
+            });
+
+        _selectedWaypointLayer.Features = [feature];
+
+        MapControl.RefreshGraphics();
     }
 
 }

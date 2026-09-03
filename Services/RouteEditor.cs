@@ -27,10 +27,13 @@ public sealed class RouteEditor
 
     private int? _draggedWaypointIndex;
 
+    /// <summary>
+    /// Gets the index of the waypoint currently being dragged, if any.
+    /// </summary>
     public int? DraggedWaypointIndex => _draggedWaypointIndex;
 
-    private int? _selectedWaypointIndex;
     private int? _speedEditOriginalSpeed;
+    private int? _selectedWaypointIndex;
 
     public int? SelectedWaypointIndex => _selectedWaypointIndex;
 
@@ -86,7 +89,11 @@ public sealed class RouteEditor
         CreationModeChanged?.Invoke(IsCreationMode);
     }
 
-
+    /// <summary>
+    /// Begins dragging the waypoint at the specified index.
+    /// </summary>
+    /// <param name="index">The index of the waypoint to drag.</param>
+    /// <returns>True if the waypoint drag operation started successfully; otherwise, false.</returns>
     public bool BeginWaypointDrag(int index)
     {
         if (CurrentRoute == null)
@@ -99,6 +106,9 @@ public sealed class RouteEditor
         return true;
     }
 
+    /// <summary>
+    /// Ends the dragging of the currently dragged waypoint.
+    /// </summary>
     public void EndWaypointDrag()
     {
         _draggedWaypointIndex = null;
@@ -130,6 +140,11 @@ public sealed class RouteEditor
         return waypoint;
     }
 
+    /// <summary>
+    /// Moves the currently dragged waypoint to a new location.
+    /// </summary>
+    /// <param name="latitude">The new latitude of the waypoint in degrees.</param>
+    /// <param name="longitude">The new longitude of the waypoint in degrees.</param>
     public void MoveDraggedWaypoint(double latitude, double longitude)
     {
         if (CurrentRoute == null ||
@@ -143,6 +158,21 @@ public sealed class RouteEditor
         waypoint.Longitude = longitude;
 
         CurrentRoute.Modified = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Clears the currently selected waypoint.
+    /// </summary>
+    public void ClearSelection()
+    {
+        if (SelectedWaypointIndex == null)
+            return;
+
+        Logger.Debug(
+            "Cleared waypoint selection. Previous index: {WaypointIndex}",
+            SelectedWaypointIndex);
+
+        _selectedWaypointIndex = null;
     }
 
     /// <summary>
