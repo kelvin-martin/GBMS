@@ -2,6 +2,8 @@
 using System;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using BruTile.FileSystem;
 using BruTile.Predefined;
 using GBMS.Models;
@@ -25,6 +27,9 @@ public partial class TacticalMapView : UserControl
 {
     private Route? _currentRoute;
     private bool _routeCreationMode;
+
+    private readonly Bitmap _routeCreationIcon;
+    private readonly Bitmap _routeCreationActiveIcon;
 
     private int? _draggedWaypointIndex;
     private bool _waypointDragging;
@@ -57,6 +62,12 @@ public partial class TacticalMapView : UserControl
         MapControl.PointerPressed += OnMapPointerPressed;
         MapControl.PointerMoved += OnMapPointerMoved;
         MapControl.PointerReleased += OnMapPointerReleased;
+
+        _routeCreationIcon = new Bitmap(AssetLoader.Open(
+        new Uri("avares://GBMS/Assets/Icons/route_creation.png")));
+
+        _routeCreationActiveIcon = new Bitmap(AssetLoader.Open(
+                new Uri("avares://GBMS/Assets/Icons/route_creation_active.png")));
 
         // Add the mouse coordinates widget to the map.
         AddMouseCoordinatesWidget();
@@ -374,7 +385,7 @@ public partial class TacticalMapView : UserControl
     /// </summary>
     private void OnRouteCreationRequested()
     {
-        StartRouteCreation();
+        ToggleRouteCreation();
     }
 
     private void StartRouteCreation()
@@ -388,9 +399,22 @@ public partial class TacticalMapView : UserControl
         };
 
         _routeCreationMode = true;
-    }
-    
 
+        UpdateRouteCreationIcon();
+    }
+
+    private void ToggleRouteCreation()
+    {
+        if (_routeCreationMode)
+        {
+            _routeCreationMode = false;
+            UpdateRouteCreationIcon();
+
+            return;
+        }
+
+        StartRouteCreation();
+    }
 
     /// <summary>
     /// Handles the MapTapped event from the MapControl.
@@ -430,12 +454,8 @@ public partial class TacticalMapView : UserControl
             waypoint.Latitude, waypoint.Longitude);
     }
 
-
-    private static double CalculateDistanceKm(
-    double latitude1,
-    double longitude1,
-    double latitude2,
-    double longitude2)
+    private static double CalculateDistanceKm(double latitude1, double longitude1,
+            double latitude2, double longitude2)
     {
         const double earthRadiusKm = 6371.0;
 
@@ -579,4 +599,9 @@ public partial class TacticalMapView : UserControl
         e.Pointer.Capture(null);
     }
 
+    private void UpdateRouteCreationIcon()
+    {
+        RouteCreationIcon.Source =
+            _routeCreationMode ? _routeCreationActiveIcon : _routeCreationIcon;
+    }
 }

@@ -24,5 +24,10 @@
 
   <ItemGroup>
     <AvaloniaResource Include="Assets\TacticalSymbols\**\*.svg" />
+    <AvaloniaResource Include="Assets\Icons\**\*.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Assets\Icons\" />
   </ItemGroup>
 </Project>

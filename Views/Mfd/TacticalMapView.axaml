@@ -8,6 +8,32 @@
 
     <Grid>
         <mapsui:MapControl x:Name="MapControl" />
+
+        <!-- Tactical Map function indicators -->
+        <Grid RowDefinitions="*,*,*,*,*,*"
+              IsHitTestVisible="False">
+
+            <!-- Route Creation function indicator -->
+            <Border Grid.Row="1" x:Name="RouteCreationIndicator"
+                    Width="64"
+                    Height="64"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    Margin="4,0,0,0"
+                    BorderBrush="#70C070"
+                    BorderThickness="3"
+                    Background="Transparent"
+                    IsVisible="True">
+
+                <Image x:Name="RouteCreationIcon"
+                       Width="24"
+                       Height="24"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       Source="/Assets/Icons/route_creation.png"/>
+            </Border>
+
+        </Grid>
     </Grid>
 
 </UserControl>
