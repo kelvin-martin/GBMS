@@ -3,9 +3,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using GBMS.Models;
-using GBMS.Services;
 
-namespace GBMS.Simulation;
+namespace GBMS.Services;
 
 public class SimulationManager
 {

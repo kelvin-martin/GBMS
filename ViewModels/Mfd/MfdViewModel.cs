@@ -81,7 +81,7 @@ public partial class MfdViewModel : ObservableObject
     {
         if (!Design.IsDesignMode)
         {
-            _clock = SimulationFactory.Current.Clock;
+            _clock = ApplicationFactory.SimulationManager.Clock;
 
             _clockTimer = new DispatcherTimer
             {
@@ -169,7 +169,7 @@ public partial class MfdViewModel : ObservableObject
     {
         ClearFunctionalArea();
 
-        SimulationFactory.Current.Stop();
+        ApplicationFactory.SimulationManager.Stop();
 
         if (Application.Current?.ApplicationLifetime is IControlledApplicationLifetime lifetime)
         {

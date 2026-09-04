@@ -53,7 +53,7 @@ public class TacticalMapViewModel : ObservableObject, IMfdInputReceiver
     {
         if (!Design.IsDesignMode)
         {
-            _simManager = SimulationFactory.Current;
+            _simManager = ApplicationFactory.SimulationManager;
 
             _simulationStateTimer = new DispatcherTimer
             {

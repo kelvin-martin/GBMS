@@ -7,8 +7,8 @@ namespace GBMS.Models;
 
 public class Route
 {
-    public Guid Id { get; set; }
-    public string Name { get; set; } = string.Empty;
+    public int Id { get; set; }
+
     public DateTime Created { get; set; }
     public DateTime Modified { get; set; }
 

@@ -1,7 +1,7 @@
 ﻿using System.Threading;
-using GBMS.Models;
+using GBMS.Simulation;
 
-namespace GBMS.Simulation;
+namespace GBMS.Models;
 
 /// <summary>
 /// Represents the current state of the simulation.

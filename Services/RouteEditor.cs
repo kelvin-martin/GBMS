@@ -65,8 +65,7 @@ public sealed class RouteEditor
         {
             CurrentRoute = new Route
             {
-                Id = Guid.NewGuid(),
-                Name = "Temporary Route",
+                Id = 0,
                 Created = DateTime.UtcNow,
                 Modified = DateTime.UtcNow
             };
