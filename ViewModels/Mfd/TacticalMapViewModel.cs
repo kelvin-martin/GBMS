@@ -90,6 +90,14 @@ public class TacticalMapViewModel : ObservableObject, IMfdInputReceiver
                 FunctionKeyRequested?.Invoke(MfdFunctionKey.L4);
                 break;
 
+            case MfdFunctionKey.L5:
+                FunctionKeyRequested?.Invoke(MfdFunctionKey.L5);
+                break;
+
+            case MfdFunctionKey.L6:
+                FunctionKeyRequested?.Invoke(MfdFunctionKey.L6);
+                break;
+
             case MfdFunctionKey.R1:
                 SelectPreviousZoomLevel();
                 break;

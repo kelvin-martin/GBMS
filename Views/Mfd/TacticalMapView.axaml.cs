@@ -369,6 +369,10 @@ public partial class TacticalMapView : UserControl
         {
             _routeEditor.ClearSelection();
         }
+        else
+        {
+            RouteManagerControl.Show(false);
+        }
 
         UpdateSelectedWaypointHighlight();
         UpdateSelectedWaypointSpeedDisplay();
@@ -579,7 +583,6 @@ public partial class TacticalMapView : UserControl
             active ? _routeCreationActiveIcon : _routeCreationIcon;
     }
 
-
     private void HandleFunctionKey(MfdFunctionKey key)
     {
         if (!_routeEditor.IsCreationMode)
@@ -602,6 +605,20 @@ public partial class TacticalMapView : UserControl
             case MfdFunctionKey.L3:
                 RouteManagerControl.Show(
                     !RouteManagerControl.IsDisplayed);
+                break;
+            case MfdFunctionKey.L5:
+                if (RouteManagerControl.IsDisplayed)
+                {
+                    Logger.Debug("Route Manager: Move selection up requested.");
+                    RouteManagerControl.MoveSelectionUp();
+                }
+                break;
+            case MfdFunctionKey.L6:
+                if (RouteManagerControl.IsDisplayed)
+                {
+                    Logger.Debug("Route Manager: Move selection down requested.");
+                    RouteManagerControl.MoveSelectionDown();
+                }
                 break;
         }
     }
