@@ -99,17 +99,16 @@ public class RouteManager
     /// </summary>
     public void AddRoute(Route route)
     {
-        ArgumentNullException.ThrowIfNull(route);
-
-        if (route.Id != 0)
+        if (route.Id == 0)
         {
-            throw new InvalidOperationException(
-                "A new route must have an ID of 0.");
+            _persistence.SaveNew(route);
+            _routes.Add(route);
         }
-
-        _persistence.SaveNew(route);
-
-        _routes.Add(route);
+        else
+        {
+            route.Modified = DateTime.UtcNow;
+            _persistence.Save(route);
+        }
 
         RoutesChanged?.Invoke();
     }

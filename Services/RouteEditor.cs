@@ -84,6 +84,17 @@ public sealed class RouteEditor
         CreationModeChanged?.Invoke(IsCreationMode);
     }
 
+
+    /// <summary>
+    /// Sets the route to be edited.
+    /// </summary>
+    /// <param name="route">The route to edit.</param>
+    public void SetRoute(Route? route)
+    {
+        CurrentRoute = route;
+        ClearSelection();
+    }
+
     /// <summary>
     /// Begins dragging the waypoint at the specified index.
     /// </summary>

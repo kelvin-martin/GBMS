@@ -372,6 +372,11 @@ public partial class TacticalMapView : UserControl
         if (!_routeEditor.IsCreationMode)
         {
             _routeEditor.ClearSelection();
+
+            if ((_routeEditor.CurrentRoute != null) && (_routeManager != null))
+            {
+                _routeManager.AddRoute(_routeEditor.CurrentRoute);
+            }
         }
         else
         {
@@ -796,6 +801,8 @@ public partial class TacticalMapView : UserControl
     private void OnCurrentRouteChanged(Route? route)
     {
         if (route == null) return;
+
+        _routeEditor.SetRoute(route);
 
         _routeLayer.SetRoute(route);
         MapControl.RefreshGraphics();
