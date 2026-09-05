@@ -42,6 +42,8 @@ public partial class TacticalMapView : UserControl
 
     private readonly RouteEditor _routeEditor;
 
+    private readonly RouteManager? _routeManager;
+
     private bool _waypointInteraction;
 
     /// <summary>
@@ -68,6 +70,9 @@ public partial class TacticalMapView : UserControl
 
         _routeEditor = new RouteEditor();
         _routeEditor.CreationModeChanged += OnRouteCreationModeChanged;
+
+        _routeManager = ApplicationFactory.RouteManager;
+        _routeManager.CurrentRouteChanged += OnCurrentRouteChanged;
 
         _routeCreationIcon = new Bitmap(AssetLoader.Open(
         new Uri("avares://GBMS/Assets/Icons/route_creation.png")));
@@ -217,8 +222,7 @@ public partial class TacticalMapView : UserControl
     /// </summary>
     private void UpdateOwnVehicleSymbol()
     {
-        if (_viewModel == null)
-            return;
+        if (_viewModel == null) return;
 
         if (_viewModel.OwnVehicleState == null)
         {
@@ -388,11 +392,9 @@ public partial class TacticalMapView : UserControl
     /// <param name="e">The event data.</param>
     private void OnMapTapped(object? sender, MapEventArgs e)
     {
-        if (!_routeEditor.IsCreationMode)
-            return;
+        if (!_routeEditor.IsCreationMode) return;
 
-        if (_routeEditor.CurrentRoute == null)
-            return;
+        if (_routeEditor.CurrentRoute == null) return;
 
         // A pointer interaction with an existing waypoint
         // must not also create a new waypoint.
@@ -426,8 +428,7 @@ public partial class TacticalMapView : UserControl
     /// <returns>The index of the waypoint if found; otherwise, null.</returns>
     private int? FindWaypointAtPosition(double latitude, double longitude)
     {
-        if (_routeEditor.CurrentRoute == null)
-            return null;
+        if (_routeEditor.CurrentRoute == null) return null;
 
         // Allow a meaningful geographic area around each waypoint.
         const double hitRadiusKm = 0.5;
@@ -523,11 +524,9 @@ public partial class TacticalMapView : UserControl
     /// <param name="e">The event data.</param>
     private void OnMapPointerMoved(object? sender, PointerEventArgs e)
     {
-        if (_routeEditor.DraggedWaypointIndex == null)
-            return;
+        if (_routeEditor.DraggedWaypointIndex == null) return;
 
-        if (_routeEditor.CurrentRoute == null)
-            return;
+        if (_routeEditor.CurrentRoute == null) return;
 
         var point = e.GetCurrentPoint(MapControl);
 
@@ -583,6 +582,12 @@ public partial class TacticalMapView : UserControl
             active ? _routeCreationActiveIcon : _routeCreationIcon;
     }
 
+    /// <summary>
+    /// Handles function key presses.
+    /// This method determines the current mode (normal map or route creation) 
+    /// and delegates the handling of the function key press to the appropriate method.
+    /// </summary>
+    /// <param name="key">The function key that was pressed.</param>
     private void HandleFunctionKey(MfdFunctionKey key)
     {
         if (!_routeEditor.IsCreationMode)
@@ -598,6 +603,11 @@ public partial class TacticalMapView : UserControl
         }
     }
 
+    /// <summary>
+    /// Handles function key presses when in normal map mode.
+    /// This method processes function keys related to the Route Manager and updates the map accordingly.
+    /// </summary>
+    /// <param name="key">The function key that was pressed.</param>
     private void HandleNormalMapFunctionKey(MfdFunctionKey key)
     {
         switch (key)
@@ -605,29 +615,38 @@ public partial class TacticalMapView : UserControl
             case MfdFunctionKey.L3:
                 RouteManagerControl.Show(
                     !RouteManagerControl.IsDisplayed);
+                UpdateContextualIcons();
+                break;
+            case MfdFunctionKey.L4:
+                if (RouteManagerControl.IsDisplayed)
+                {
+                    RouteManagerControl.Select();
+                }
                 break;
             case MfdFunctionKey.L5:
                 if (RouteManagerControl.IsDisplayed)
                 {
-                    Logger.Debug("Route Manager: Move selection up requested.");
                     RouteManagerControl.MoveSelectionUp();
                 }
                 break;
             case MfdFunctionKey.L6:
                 if (RouteManagerControl.IsDisplayed)
                 {
-                    Logger.Debug("Route Manager: Move selection down requested.");
                     RouteManagerControl.MoveSelectionDown();
                 }
                 break;
         }
     }
 
+    /// <summary>
+    /// Handles function key presses when in speed edit mode for a selected waypoint.
+    /// </summary>
+    /// <param name="key"></param>
     private void HandleSpeedEditFunctionKey(MfdFunctionKey key)
     {
         switch (key)
         {
-            case MfdFunctionKey.L3:
+            case MfdFunctionKey.L5:
                 if (_routeEditor.SelectedWaypointIndex == null)
                     return;
 
@@ -638,7 +657,7 @@ public partial class TacticalMapView : UserControl
                 MapControl.RefreshGraphics();
                 break;
 
-            case MfdFunctionKey.L4:
+            case MfdFunctionKey.L6:
                 if (_routeEditor.SelectedWaypointIndex == null)
                     return;
 
@@ -662,9 +681,19 @@ public partial class TacticalMapView : UserControl
         if (!_routeEditor.IsCreationMode)
         {
             // Normal Tactical Map mode.
-            L3ContextIcon.IsVisible = false;
-            L4ContextIcon.IsVisible = false;
+            SpeedIncreaseIndicator.IsVisible = false;
+            SpeedDecreaseIndicator.IsVisible = false;
             RouteManagerIcon.IsVisible = true;
+
+            // When the Route Manager is displayed, L5/L6 navigate
+            // through the route collection.
+            bool routeManagerDisplayed =
+                RouteManagerControl.IsDisplayed;
+
+            CursorUpIndicator.IsVisible = routeManagerDisplayed;
+            CursorDownIndicator.IsVisible = routeManagerDisplayed;
+            AcceptRouteIndicator.IsVisible = routeManagerDisplayed;
+
             return;
         }
 
@@ -674,18 +703,9 @@ public partial class TacticalMapView : UserControl
         bool waypointSelected =
             _routeEditor.SelectedWaypointIndex != null;
 
-        if (waypointSelected)
-        {
-            // Speed editing mode.
-            L3ContextIcon.IsVisible = true;
-            L4ContextIcon.IsVisible = true;
-        }
-        else
-        {
-            // Route creation with no active speed edit.
-            L3ContextIcon.IsVisible = false;
-            L4ContextIcon.IsVisible = false;
-        }
+        // Speed editing mode.
+        SpeedIncreaseIndicator.IsVisible = waypointSelected;
+        SpeedDecreaseIndicator.IsVisible = waypointSelected;
     }
 
 
@@ -696,13 +716,11 @@ public partial class TacticalMapView : UserControl
     {
         _selectedWaypointLayer.Features = [];
 
-        if (_routeEditor.CurrentRoute == null)
-            return;
+        if (_routeEditor.CurrentRoute == null) return;
 
         int? selectedIndex = _routeEditor.SelectedWaypointIndex;
 
-        if (selectedIndex == null)
-            return;
+        if (selectedIndex == null) return;
 
         if (selectedIndex.Value < 0 ||
             selectedIndex.Value >= _routeEditor.CurrentRoute.Waypoints.Count)
@@ -747,6 +765,9 @@ public partial class TacticalMapView : UserControl
         MapControl.RefreshGraphics();
     }
 
+    /// <summary>
+    /// Updates the display of the speed for the selected waypoint.
+    /// </summary>
     private void UpdateSelectedWaypointSpeedDisplay()
     {
         int? selectedIndex = _routeEditor.SelectedWaypointIndex;
@@ -767,4 +788,16 @@ public partial class TacticalMapView : UserControl
         SpeedEditPanel.IsVisible = true;
     }
 
+    /// <summary>
+    /// Handles the event when the CurrentRouteChanged event from the RouteManager.
+    /// This method updates the route layer on the map to reflect the new current route.
+    /// </summary>
+    /// <param name="route">The new current route, or <c>null</c> if there is no current route.</param>
+    private void OnCurrentRouteChanged(Route? route)
+    {
+        if (route == null) return;
+
+        _routeLayer.SetRoute(route);
+        MapControl.RefreshGraphics();
+    }
 }

@@ -74,9 +74,23 @@
                        Stretch="Uniform"/>
             </Border>
 
-            <!-- L3 - Speed Increase -->
-            <Border x:Name="L3ContextIcon"
-                    Grid.Row="2"
+            <!-- L4 - Accept Route -->
+            <Border x:Name="AcceptRouteIndicator"
+                    Grid.Row="3"
+                    Width="64"
+                    Height="64"
+                    Margin="4,0,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    IsVisible="False">
+
+                <Image Source="/Assets/Icons/accept.png"
+                       Stretch="Uniform"/>
+            </Border>
+
+            <!-- L5 - Speed Increase -->
+            <Border x:Name="SpeedIncreaseIndicator"
+                    Grid.Row="4"
                     Width="64"
                     Height="64"
                     Margin="4,0,0,0"
@@ -88,9 +102,9 @@
                        Stretch="Uniform"/>
             </Border>
 
-            <!-- L4 - Speed Decrease -->
-            <Border x:Name="L4ContextIcon"
-                    Grid.Row="3"
+            <!-- L6 - Speed Decrease -->
+            <Border x:Name="SpeedDecreaseIndicator"
+                    Grid.Row="5"
                     Width="64"
                     Height="64"
                     Margin="4,0,0,0"
@@ -101,6 +115,39 @@
                 <Image Source="/Assets/Icons/decrease.png"
                        Stretch="Uniform"/>
             </Border>
+
+            <!-- L5 - Route Cursor Up -->
+            <Border x:Name="CursorUpIndicator"
+                    Grid.Row="4"
+                    Width="64"
+                    Height="64"
+                    Margin="4,0,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    IsVisible="False">
+
+                <Image Source="/Assets/Icons/up_arrow.png"
+                       Stretch="Uniform"/>
+            </Border>
+
+            <!-- L6 - Route Cursor Down -->
+            <Border x:Name="CursorDownIndicator"
+                    Grid.Row="5"
+                    Width="64"
+                    Height="64"
+                    Margin="4,0,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    IsVisible="False">
+
+                <Image Source="/Assets/Icons/down_arrow.png"
+                       Stretch="Uniform"/>
+            </Border>
+
+
+
+
+
 
         </Grid>
     </Grid>

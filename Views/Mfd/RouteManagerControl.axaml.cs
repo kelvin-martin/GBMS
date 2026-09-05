@@ -4,8 +4,6 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using Avalonia;
 using Avalonia.Controls;
 using GBMS.Models;
 using GBMS.Services;
@@ -115,6 +113,8 @@ public partial class RouteManagerControl : UserControl, INotifyPropertyChanged
         _lastSelectedRouteId = item.Route.Id;
 
         _routeManager.SelectRoute(item.Route.Id);
+
+        Logger.Debug($"Route {item.Route.Id} selected for display.");
     }
 
     /// <summary>
@@ -234,14 +234,41 @@ public partial class RouteManagerControl : UserControl, INotifyPropertyChanged
     /// <summary>
     /// Holds the display information for a route in the Route Manager control.
     /// </summary>
-    public sealed class RouteDisplayItem
+    public sealed class RouteDisplayItem : INotifyPropertyChanged
     {
+        public event PropertyChangedEventHandler? PropertyChanged;
+
         public Route Route { get; }
 
-        public string SelectionIndicator { get; set; } = " ";
+        private string _selectionIndicator = " ";
 
+        /// <summary>
+        /// Gets or sets the selection indicator for the route display item.
+        /// </summary>
+        public string SelectionIndicator
+        {
+            get => _selectionIndicator;
+            set
+            {
+                if (_selectionIndicator == value)
+                    return;
+
+                _selectionIndicator = value;
+
+                PropertyChanged?.Invoke(
+                    this,
+                    new PropertyChangedEventArgs(nameof(SelectionIndicator)));
+            }
+        }
+
+        /// <summary>
+        /// Gets the text id  representation of the route.
+        /// </summary>
         public string RouteText => $"R{Route.Id:000}";
 
+        /// <summary>
+        /// Gets the text representation of the route's last modified date and time.
+        /// </summary>
         public string ModifiedText =>
             Route.Modified == DateTime.MinValue
                 ? string.Empty
@@ -251,6 +278,9 @@ public partial class RouteManagerControl : UserControl, INotifyPropertyChanged
                         CultureInfo.InvariantCulture)
                     .ToUpperInvariant();
 
+        /// <summary>
+        /// Gets the text representation of the number of waypoints in the route.
+        /// </summary>
         public string WaypointText =>
             $"{Route.Waypoints.Count} WP";
 
@@ -261,6 +291,10 @@ public partial class RouteManagerControl : UserControl, INotifyPropertyChanged
             Route = route;
         }
 
+        /// <summary>
+        /// Formats the first waypoint of the route as a string with latitude and longitude.
+        /// </summary>
+        /// <returns>A string representation of the first waypoint's coordinates.</returns>
         private string FormatFirstWaypoint()
         {
             if (Route.Waypoints.Count == 0)
@@ -274,6 +308,11 @@ public partial class RouteManagerControl : UserControl, INotifyPropertyChanged
                    $"{FormatLongitude(waypoint.Longitude)}";
         }
 
+        /// <summary>
+        /// Formats a latitude value as a string with degrees, minutes, and hemisphere.
+        /// </summary>
+        /// <param name="latitude">The latitude value to format.</param>
+        /// <returns>A string representation of the latitude.</returns>
         private static string FormatLatitude(double latitude)
         {
             char hemisphere = latitude >= 0 ? 'N' : 'S';
@@ -291,6 +330,11 @@ public partial class RouteManagerControl : UserControl, INotifyPropertyChanged
             return $"{degrees:00}°{minutes:00}'{hemisphere}";
         }
 
+        /// <summary>
+        /// Formats a longitude value as a string with degrees, minutes, and hemisphere.
+        /// </summary>
+        /// <param name="longitude">The longitude value to format.</param>
+        /// <returns>A string representation of the longitude.</returns>
         private static string FormatLongitude(double longitude)
         {
             char hemisphere = longitude >= 0 ? 'E' : 'W';
