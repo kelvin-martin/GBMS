@@ -25,7 +25,7 @@ public class TacticalMapViewModel : ObservableObject, IMfdInputReceiver
 
     public event Action? RouteCreationRequested;
 
-    public event Action<string>? FunctionKeyRequested;
+    public event Action<MfdFunctionKey>? FunctionKeyRequested;
 
     private readonly SimulationManager? _simManager;
 
@@ -83,10 +83,11 @@ public class TacticalMapViewModel : ObservableObject, IMfdInputReceiver
                 break;
 
             case MfdFunctionKey.L3:
+                FunctionKeyRequested?.Invoke(MfdFunctionKey.L3);
+                break;
+
             case MfdFunctionKey.L4:
-            case MfdFunctionKey.L5: 
-            case MfdFunctionKey.L6:
-                FunctionKeyRequested?.Invoke(key.ToString());
+                FunctionKeyRequested?.Invoke(MfdFunctionKey.L4);
                 break;
 
             case MfdFunctionKey.R1:

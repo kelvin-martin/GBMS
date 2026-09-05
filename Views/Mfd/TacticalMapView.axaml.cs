@@ -31,8 +31,6 @@ namespace GBMS.Views.Mfd;
 /// </summary>
 public partial class TacticalMapView : UserControl
 {
-    // private bool _routeCreationMode;
-
     private readonly Bitmap _routeCreationIcon;
     private readonly Bitmap _routeCreationActiveIcon;
 
@@ -581,18 +579,38 @@ public partial class TacticalMapView : UserControl
             active ? _routeCreationActiveIcon : _routeCreationIcon;
     }
 
-    private void HandleFunctionKey(string key)
+
+    private void HandleFunctionKey(MfdFunctionKey key)
     {
         if (!_routeEditor.IsCreationMode)
+        {
+            HandleNormalMapFunctionKey(key);
             return;
+        }
 
-        Logger.Debug(
-            "Handling route creation function key: {FunctionKey}",
-            key);
+        if (_routeEditor.SelectedWaypointIndex != null)
+        {
+            HandleSpeedEditFunctionKey(key);
+            return;
+        }
+    }
 
+    private void HandleNormalMapFunctionKey(MfdFunctionKey key)
+    {
         switch (key)
         {
-            case "L3":
+            case MfdFunctionKey.L3:
+                RouteManagerControl.Show(
+                    !RouteManagerControl.IsDisplayed);
+                break;
+        }
+    }
+
+    private void HandleSpeedEditFunctionKey(MfdFunctionKey key)
+    {
+        switch (key)
+        {
+            case MfdFunctionKey.L3:
                 if (_routeEditor.SelectedWaypointIndex == null)
                     return;
 
@@ -603,7 +621,7 @@ public partial class TacticalMapView : UserControl
                 MapControl.RefreshGraphics();
                 break;
 
-            case "L4":
+            case MfdFunctionKey.L4:
                 if (_routeEditor.SelectedWaypointIndex == null)
                     return;
 
@@ -613,11 +631,6 @@ public partial class TacticalMapView : UserControl
                 UpdateSelectedWaypointSpeedDisplay();
                 MapControl.RefreshGraphics();
                 break;
-
-            case "L5":
-            case "L6":
-                // Currently unused in Route Creation.
-                break;
         }
     }
 
@@ -626,16 +639,38 @@ public partial class TacticalMapView : UserControl
     /// </summary>
     private void UpdateContextualIcons()
     {
+        // L1 is always available.
+        CentreVehicleIcon.IsVisible = true;
+
+        if (!_routeEditor.IsCreationMode)
+        {
+            // Normal Tactical Map mode.
+            L3ContextIcon.IsVisible = false;
+            L4ContextIcon.IsVisible = false;
+            RouteManagerIcon.IsVisible = true;
+            return;
+        }
+
+        RouteManagerIcon.IsVisible = false;
+
+        // Route creation/editing mode.
         bool waypointSelected =
             _routeEditor.SelectedWaypointIndex != null;
 
-        L3ContextIcon.IsVisible = waypointSelected;
-        L4ContextIcon.IsVisible = waypointSelected;
-
-        // L5 and L6 currently have no function.
-        L5ContextIcon.IsVisible = false;
-        L6ContextIcon.IsVisible = false;
+        if (waypointSelected)
+        {
+            // Speed editing mode.
+            L3ContextIcon.IsVisible = true;
+            L4ContextIcon.IsVisible = true;
+        }
+        else
+        {
+            // Route creation with no active speed edit.
+            L3ContextIcon.IsVisible = false;
+            L4ContextIcon.IsVisible = false;
+        }
     }
+
 
     /// <summary>
     /// Updates the highlight for the selected waypoint on the map.

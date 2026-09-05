@@ -1,0 +1,80 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:views="using:GBMS.Views.Mfd"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="GBMS.Views.Mfd.RouteManagerControl"
+             x:DataType="views:RouteManagerControl">
+
+    <Border
+        Background="#CC202020"
+        Padding="6">
+
+        <StackPanel>
+
+            <TextBlock
+                Text="ROUTE MANAGER"
+                FontWeight="Bold"
+                Margin="0,0,0,4" />
+
+            <ItemsControl ItemsSource="{Binding DisplayRoutes}">
+
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate
+                        x:DataType="views:RouteManagerControl+RouteDisplayItem">
+
+                        <Grid
+                            ColumnDefinitions="18,65,125,55,*"
+                            Height="24">
+
+                            <!-- Selection indicator -->
+                            <TextBlock
+                                Grid.Column="0"
+                                Text="{Binding SelectionIndicator}"
+                                VerticalAlignment="Center" />
+
+                            <!-- Route ID -->
+                            <TextBlock
+                                Grid.Column="1"
+                                Text="{Binding RouteText}"
+                                VerticalAlignment="Center" />
+
+                            <!-- Modified -->
+                            <TextBlock
+                                Grid.Column="2"
+                                Text="{Binding ModifiedText}"
+                                VerticalAlignment="Center" />
+
+                            <!-- Waypoint count -->
+                            <TextBlock
+                                Grid.Column="3"
+                                Text="{Binding WaypointText}"
+                                VerticalAlignment="Center" />
+
+                            <!-- First waypoint -->
+                            <TextBlock
+                                Grid.Column="4"
+                                Text="{Binding FirstWaypointText}"
+                                VerticalAlignment="Center" />
+
+                        </Grid>
+
+                    </DataTemplate>
+
+                </ItemsControl.ItemTemplate>
+
+            </ItemsControl>
+
+            <TextBlock
+                x:Name="NoRoutesText"
+                Text="NO ROUTES"
+                IsVisible="False"
+                HorizontalAlignment="Center"
+                Margin="0,6,0,0" />
+
+        </StackPanel>
+
+    </Border>
+
+</UserControl>

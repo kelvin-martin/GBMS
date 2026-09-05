@@ -16,13 +16,36 @@
                               IsVisible="False"
                               HorizontalAlignment="Center"
                               VerticalAlignment="Bottom"
-                              Margin="0,0,0,24" />
+                              Margin="0,0,0,50" />
+
+        <!-- Route Manager overlay -->
+        <views:RouteManagerControl
+            x:Name="RouteManagerControl"
+            HorizontalAlignment="Left"
+            VerticalAlignment="Bottom"
+            Margin="100,0,0,50"
+            IsVisible="False" />
 
         <!-- Tactical Map function indicators -->
         <Grid RowDefinitions="*,*,*,*,*,*"
               IsHitTestVisible="False">
 
-            <!-- L2 - Route Creatio -->
+            <!-- L1 - Centre on Own Vehicle -->
+            <Border Grid.Row="0"
+                    x:Name="CentreVehicleIndicator"
+                    Width="64"
+                    Height="64"
+                    Margin="4,0,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    IsVisible="True">
+
+                <Image x:Name="CentreVehicleIcon"
+                       Source="/Assets/Icons/centre_vehicle.png"
+                       Stretch="Uniform"/>
+            </Border>
+
+            <!-- L2 - Route Creation -->
             <Border Grid.Row="1" x:Name="RouteCreationIndicator"
                     Width="64"
                     Height="64"
@@ -33,6 +56,21 @@
 
                 <Image x:Name="RouteCreationIcon"
                        Source="/Assets/Icons/route_creation.png"
+                       Stretch="Uniform"/>
+            </Border>
+
+            <!-- L3 - Route Manager -->
+            <Border Grid.Row="2"
+                    x:Name="RouteManagerIndicator"
+                    Width="64"
+                    Height="64"
+                    Margin="4,0,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    IsVisible="True">
+
+                <Image x:Name="RouteManagerIcon"
+                       Source="/Assets/Icons/routes.png"
                        Stretch="Uniform"/>
             </Border>
 
@@ -61,34 +99,6 @@
                     IsVisible="False">
 
                 <Image Source="/Assets/Icons/decrease.png"
-                       Stretch="Uniform"/>
-            </Border>
-
-            <!-- L5 - Accept / Set -->
-            <Border x:Name="L5ContextIcon"
-                    Grid.Row="4"
-                    Width="64"
-                    Height="64"
-                    Margin="4,0,0,0"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Top"
-                    IsVisible="False">
-
-                <Image Source="/Assets/Icons/accept.png"
-                       Stretch="Uniform"/>
-            </Border>
-
-            <!-- L6 - Cancel -->
-            <Border x:Name="L6ContextIcon"
-                    Grid.Row="5"
-                    Width="64"
-                    Height="64"
-                    Margin="4,0,0,0"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Top"
-                    IsVisible="False">
-
-                <Image Source="/Assets/Icons/cancel.png"
                        Stretch="Uniform"/>
             </Border>
 
