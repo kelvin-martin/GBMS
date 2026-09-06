@@ -24,10 +24,10 @@ public static class ApplicationFactory
 
         _messenger = new Messenger();
 
-        _simulationManager = new SimulationManager();
-
         var persistence = new RoutePersistence();
         _routeManager = new RouteManager(persistence);
+
+        _simulationManager = new SimulationManager();
     }
 
     /// <summary>
@@ -44,6 +44,9 @@ public static class ApplicationFactory
     _messenger ?? throw new InvalidOperationException(
         "ApplicationFactory has not been initialized.");
 
+    /// <summary>
+    /// Gets the application-wide RouteManager.
+    /// </summary>
     public static RouteManager RouteManager =>
     _routeManager ?? throw new InvalidOperationException(
         "ApplicationFactory has not been initialized.");

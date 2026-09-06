@@ -35,6 +35,48 @@ public class Mapping
     public static double KMInOneDegreeLat1 => KMInOneDegreeLat;
 
     /// <summary>
+    /// Projects a new geographic position a given distance along a given
+    /// bearing from a starting position, using a great-circle (spherical) projection.
+    /// </summary>
+    /// <param name="latitude">The latitude of the starting point in degrees.</param>
+    /// <param name="longitude">The longitude of the starting point in degrees.</param>
+    /// <param name="bearingDegrees">The bearing to travel along, in degrees.</param>
+    /// <param name="distanceKm">The distance to travel, in kilometers.</param>
+    /// <returns>The resulting latitude/longitude, in degrees.</returns>
+    public static (double Latitude, double Longitude) ProjectPosition(
+        double latitude, double longitude, double bearingDegrees, double distanceKm)
+    {
+        double latitudeRadians = latitude * Math.PI / 180.0;
+        double bearingRadians = bearingDegrees * Math.PI / 180.0;
+
+        double angularDistance = distanceKm / EarthRadiusKm;
+
+        double newLatitudeRadians =
+            Math.Asin(
+                Math.Sin(latitudeRadians) *
+                    Math.Cos(angularDistance)
+                +
+                Math.Cos(latitudeRadians) *
+                    Math.Sin(angularDistance) *
+                    Math.Cos(bearingRadians));
+
+        double newLongitudeRadians =
+            longitude * Math.PI / 180.0 +
+            Math.Atan2(
+                Math.Sin(bearingRadians) *
+                    Math.Sin(angularDistance) *
+                    Math.Cos(latitudeRadians),
+                Math.Cos(angularDistance) -
+                    Math.Sin(latitudeRadians) *
+                    Math.Sin(newLatitudeRadians));
+
+        double newLatitude = newLatitudeRadians * 180.0 / Math.PI;
+        double newLongitude = newLongitudeRadians * 180.0 / Math.PI;
+
+        return (newLatitude, newLongitude);
+    }
+
+    /// <summary>
     /// Creates a list of points representing a geodesic circle.
     /// This method approximates a geodesic circle by calculating points at equal 
     /// angular intervals around the center point.
@@ -47,42 +89,13 @@ public class Mapping
     {
         var points = new List<MPoint>(GeodesicPointCount);
 
-        // Convert the POI position to radians.
-        double latitudeRadians = latitude * Math.PI / 180.0;
-        double longitudeRadians = longitude * Math.PI / 180.0;
-
-        // Angular distance represented by the radius.
-        double angularDistance = radiusKm / EarthRadiusKm;
-
         for (int i = 0; i < GeodesicPointCount; i++)
         {
             // Bearing around the circle.
-            double bearing = 2.0 * Math.PI * i / GeodesicPointCount;
+            double bearingDegrees = 360.0 * i / GeodesicPointCount;
 
-            // Calculate latitude at this bearing and distance.
-            double pointLatitude = Math.Asin(
-                Math.Sin(latitudeRadians) *
-                    Math.Cos(angularDistance)
-                +
-                Math.Cos(latitudeRadians) *
-                    Math.Sin(angularDistance) *
-                    Math.Cos(bearing));
-
-            // Calculate longitude at this bearing and distance.
-            double pointLongitude =
-                longitudeRadians +
-                Math.Atan2(
-                    Math.Sin(bearing) *
-                        Math.Sin(angularDistance) *
-                        Math.Cos(latitudeRadians),
-                    Math.Cos(angularDistance) -
-                        Math.Sin(latitudeRadians) *
-                        Math.Sin(pointLatitude));
-
-            // Convert back to degrees.
-            double pointLatitudeDegrees = pointLatitude * 180.0 / Math.PI;
-
-            double pointLongitudeDegrees = pointLongitude * 180.0 / Math.PI;
+            var (pointLatitudeDegrees, pointLongitudeDegrees) = ProjectPosition(
+                latitude, longitude, bearingDegrees, radiusKm);
 
             // Web Mercator cannot represent the poles.
             pointLatitudeDegrees = Math.Clamp(

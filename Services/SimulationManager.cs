@@ -9,6 +9,7 @@ namespace GBMS.Services;
 public class SimulationManager
 {
     private readonly SimulationLoop _simulationLoop;
+    private readonly RouteManager _routeManager;
 
     private CancellationTokenSource? _simulationCancellation;
     private Task? _simulationTask;
@@ -29,6 +30,13 @@ public class SimulationManager
         SimulationState = new SimulationState();
 
         _simulationLoop = new SimulationLoop(Clock, 10.0);
+
+        _routeManager = ApplicationFactory.RouteManager;
+
+        if (_routeManager == null)
+            throw new InvalidOperationException("RouteManager is not initialized.");
+
+        _routeManager.AssignedRouteChanged += OnAssignedRouteChanged;
     }
 
     public void Start()
@@ -63,5 +71,14 @@ public class SimulationManager
         OwnVehicle.Update(simulationStep);
 
         SimulationState.UpdateOwnVehicle(OwnVehicle);
+    }
+
+    /// <summary>
+    /// Forwards route assignment changes from the Route Manager to Own Vehicle.
+    /// </summary>
+    /// <param name="route">The newly assigned route, or <c>null</c> if none is assigned.</param>
+    private void OnAssignedRouteChanged(Route? route)
+    {
+        OwnVehicle.AssignRoute(route);
     }
 }

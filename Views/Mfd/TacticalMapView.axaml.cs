@@ -58,9 +58,9 @@ public partial class TacticalMapView : UserControl
         // InitialiseLocalCache();
         InitialiseOnlineMap();
 
-        MapControl.Map.Layers.Add(_tacticalSymbolLayer.Layer);
         MapControl.Map.Layers.Add(_routeLayer.Layer);
         MapControl.Map.Layers.Add(_selectedWaypointLayer);
+        MapControl.Map.Layers.Add(_tacticalSymbolLayer.Layer);
 
         MapControl.MapTapped += OnMapTapped;
 
