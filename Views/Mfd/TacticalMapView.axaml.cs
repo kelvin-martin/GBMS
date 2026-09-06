@@ -1,7 +1,5 @@
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media.Imaging;
@@ -14,14 +12,12 @@ using GBMS.ViewModels.Mfd;
 using Mapsui;
 using Mapsui.Extensions;
 using Mapsui.Layers;
-using Mapsui.Nts;
 using Mapsui.Projections;
 using Mapsui.Styles;
 using Mapsui.Tiling.Layers;
 using Mapsui.UI.Avalonia;
 using Mapsui.Widgets;
 using Mapsui.Widgets.ScaleBar;
-using NetTopologySuite.Geometries;
 using static GBMS.ViewModels.Mfd.TacticalMapViewModel;
 
 namespace GBMS.Views.Mfd;
@@ -84,6 +80,7 @@ public partial class TacticalMapView : UserControl
                 _routeManager.AssignedRouteChanged += OnAssignedRouteChanged;
             }
         }
+
 
         _routeCreationIcon = new Bitmap(AssetLoader.Open(
         new Uri("avares://GBMS/Assets/Icons/route_creation.png")));
@@ -449,17 +446,25 @@ public partial class TacticalMapView : UserControl
     }
 
     /// <summary>
-    /// Finds the index of a waypoint at the specified geographic position.
+    /// Finds the index of the nearest waypoint to the specified geographic
+    /// position, within a small hit-test radius. Returns the nearest match
+    /// rather than the first match, so closely-spaced waypoints can still be
+    /// individually selected.
     /// </summary>
     /// <param name="latitude">The latitude of the position in degrees.</param>
     /// <param name="longitude">The longitude of the position in degrees.</param>
-    /// <returns>The index of the waypoint if found; otherwise, null.</returns>
+    /// <returns>The index of the nearest waypoint within range, if any; otherwise, null.</returns>
     private int? FindWaypointAtPosition(double latitude, double longitude)
     {
         if (_routeEditor.CurrentRoute == null) return null;
 
-        // Allow a meaningful geographic area around each waypoint.
-        const double hitRadiusKm = 0.5;
+        // Kept tight so closely-spaced waypoints remain individually
+        // selectable - a generous radius makes ambiguous clicks resolve to
+        // whichever waypoint happens to come first, not the intended one.
+        const double hitRadiusKm = 0.05; // 50 metres
+
+        int? nearestIndex = null;
+        double nearestDistanceKm = double.MaxValue;
 
         for (int i = 0; i < _routeEditor.CurrentRoute.Waypoints.Count; i++)
         {
@@ -469,11 +474,14 @@ public partial class TacticalMapView : UserControl
                 latitude, longitude,
                 waypoint.Latitude, waypoint.Longitude);
 
-            if (distanceKm <= hitRadiusKm)
-                return i;
+            if (distanceKm <= hitRadiusKm && distanceKm < nearestDistanceKm)
+            {
+                nearestDistanceKm = distanceKm;
+                nearestIndex = i;
+            }
         }
 
-        return null;
+        return nearestIndex;
     }
 
     /// <summary>
@@ -650,8 +658,9 @@ public partial class TacticalMapView : UserControl
                 {
                     RouteManagerControl.Select();
                 }
-                else if (_routeManager != null && _routeManager.CurrentRoute != null &&
-                    !ReferenceEquals(_routeManager.CurrentRoute, _routeManager.AssignedRoute))
+                else if (_routeManager != null &&
+                         _routeManager.CurrentRoute != null &&
+                         !ReferenceEquals(_routeManager.CurrentRoute, _routeManager.AssignedRoute))
                 {
                     _routeManager.AssignRoute(_routeManager.CurrentRoute.Id);
                 }
@@ -686,7 +695,6 @@ public partial class TacticalMapView : UserControl
                 _routeEditor.AdjustSelectedWaypointSpeed(+1);
 
                 _routeLayer.SetRoute(_routeEditor.CurrentRoute, IsAssigned(_routeEditor.CurrentRoute));
-
                 UpdateSelectedWaypointSpeedDisplay();
                 MapControl.RefreshGraphics();
                 break;
@@ -698,7 +706,6 @@ public partial class TacticalMapView : UserControl
                 _routeEditor.AdjustSelectedWaypointSpeed(-1);
 
                 _routeLayer.SetRoute(_routeEditor.CurrentRoute!, IsAssigned(_routeEditor.CurrentRoute));
-
                 UpdateSelectedWaypointSpeedDisplay();
                 MapControl.RefreshGraphics();
                 break;
@@ -730,7 +737,6 @@ public partial class TacticalMapView : UserControl
             AcceptRouteIndicator.IsVisible = routeManagerDisplayed;
             AssignedRouteIndicator.IsVisible = false;
 
-
             if ((_routeManager?.CurrentRoute != null) && (_routeManager.AssignedRoute == null))
             {
                 AssignedRouteIndicator.IsVisible = true;
@@ -753,6 +759,9 @@ public partial class TacticalMapView : UserControl
 
     /// <summary>
     /// Updates the highlight for the selected waypoint on the map.
+    /// Rendered as a screen-space-sized symbol (like the waypoint marker
+    /// itself) rather than a fixed real-world-radius circle, so it stays a
+    /// consistent size relative to the marker regardless of zoom level.
     /// </summary>
     private void UpdateSelectedWaypointHighlight()
     {
@@ -771,36 +780,18 @@ public partial class TacticalMapView : UserControl
         Waypoint waypoint =
             _routeEditor.CurrentRoute.Waypoints[selectedIndex.Value];
 
-        // Create a small geodesic selection halo around
-        // the selected waypoint.
-        List<MPoint> points = Mapping.CreateGeodesicCircle(
-            waypoint.Latitude, waypoint.Longitude,
-            0.25);       // 250 metres
+        var position = SphericalMercator.FromLonLat(
+            waypoint.Longitude, waypoint.Latitude);
 
-        var coordinates = points
-            .Select(p => new Coordinate(p.X, p.Y)).ToList();
+        var feature = new PointFeature(new MPoint(position.x, position.y));
 
-        // Close the polygon ring.
-        if (coordinates.Count > 0 &&
-            !coordinates[0].Equals2D(coordinates[^1]))
+        feature.Styles.Add(new SymbolStyle
         {
-            coordinates.Add(coordinates[0]);
-        }
-
-        var ring = new LinearRing(coordinates.ToArray());
-
-        var polygon = new Polygon(ring);
-
-        var feature = new GeometryFeature(polygon);
-
-        feature.Styles.Add(
-            new VectorStyle
-            {
-                Fill = null,
-                Outline = new Pen(
-                    Color.Green,
-                    3)
-            });
+            SymbolType = SymbolType.Ellipse,
+            SymbolScale = 1.0,
+            Fill = null,
+            Outline = new Pen(Color.Green, 3)
+        });
 
         _selectedWaypointLayer.Features = [feature];
 
@@ -860,7 +851,7 @@ public partial class TacticalMapView : UserControl
 
         if (displayedRoute == null) return;
 
-        bool isAssigned = ReferenceEquals(displayedRoute, route);
+        bool isAssigned = IsAssigned(displayedRoute);
 
         _routeLayer.SetRoute(displayedRoute, isAssigned);
         MapControl.RefreshGraphics();
