@@ -445,38 +445,40 @@ public partial class TacticalMapView : UserControl
             waypoint.Latitude, waypoint.Longitude, waypoint.Speed);
     }
 
-    /// <summary>
-    /// Finds the index of the nearest waypoint to the specified geographic
-    /// position, within a small hit-test radius. Returns the nearest match
-    /// rather than the first match, so closely-spaced waypoints can still be
-    /// individually selected.
-    /// </summary>
-    /// <param name="latitude">The latitude of the position in degrees.</param>
-    /// <param name="longitude">The longitude of the position in degrees.</param>
-    /// <returns>The index of the nearest waypoint within range, if any; otherwise, null.</returns>
-    private int? FindWaypointAtPosition(double latitude, double longitude)
+    // Hit-test radius in screen pixels - deliberately independent of zoom level,
+    // so waypoint selection stays equally easy to hit at any scale, while still
+    // discriminating between closely-spaced waypoints (which shrink toward each
+    // other on screen only when zoomed out, at which point missing between them
+    // matters less).
+    private const double WaypointHitRadiusPixels = 15.0;
+
+    private int? FindWaypointAtScreenPosition(Avalonia.Point screenPosition)
     {
         if (_routeEditor.CurrentRoute == null) return null;
 
-        // Kept tight so closely-spaced waypoints remain individually
-        // selectable - a generous radius makes ambiguous clicks resolve to
-        // whichever waypoint happens to come first, not the intended one.
-        const double hitRadiusKm = 0.05; // 50 metres
+        var viewport = MapControl.Map.Navigator.Viewport;
 
         int? nearestIndex = null;
-        double nearestDistanceKm = double.MaxValue;
+        double nearestDistancePixels = double.MaxValue;
 
         for (int i = 0; i < _routeEditor.CurrentRoute.Waypoints.Count; i++)
         {
             var waypoint = _routeEditor.CurrentRoute.Waypoints[i];
 
-            double distanceKm = Mapping.CalculateDistanceKm(
-                latitude, longitude,
-                waypoint.Latitude, waypoint.Longitude);
+            var worldPosition = SphericalMercator.FromLonLat(
+                waypoint.Longitude, waypoint.Latitude);
 
-            if (distanceKm <= hitRadiusKm && distanceKm < nearestDistanceKm)
+            Mapsui.Manipulations.ScreenPosition screenPoint =
+                viewport.WorldToScreen(worldPosition.x, worldPosition.y);
+
+            double dx = screenPoint.X - screenPosition.X;
+            double dy = screenPoint.Y - screenPosition.Y;
+            double distancePixels = Math.Sqrt(dx * dx + dy * dy);
+
+            if (distancePixels <= WaypointHitRadiusPixels &&
+                distancePixels < nearestDistancePixels)
             {
-                nearestDistanceKm = distanceKm;
+                nearestDistancePixels = distancePixels;
                 nearestIndex = i;
             }
         }
@@ -525,8 +527,12 @@ public partial class TacticalMapView : UserControl
         var lonLat = SphericalMercator.ToLonLat(
             worldPosition.X, worldPosition.Y);
 
-        int? waypointIndex = FindWaypointAtPosition(
-            lonLat.lat, lonLat.lon);
+        // Before:
+        // MPoint worldPosition = MapControl.Map.Navigator.Viewport.ScreenToWorld(point.Position.X, point.Position.Y);
+        // var lonLat = SphericalMercator.ToLonLat(worldPosition.X, worldPosition.Y);
+        // int? waypointIndex = FindWaypointAtPosition(lonLat.lat, lonLat.lon);
+
+        int? waypointIndex = FindWaypointAtScreenPosition(point.Position);
 
         if (waypointIndex == null)
             return;
