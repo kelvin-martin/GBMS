@@ -640,7 +640,7 @@ public partial class TacticalMapView : UserControl
 
         if (_routeEditor.SelectedWaypointIndex != null)
         {
-            HandleSpeedEditFunctionKey(key);
+            HandleWaypointEditFunctionKey(key);
             return;
         }
     }
@@ -690,10 +690,22 @@ public partial class TacticalMapView : UserControl
     /// Handles function key presses when in speed edit mode for a selected waypoint.
     /// </summary>
     /// <param name="key"></param>
-    private void HandleSpeedEditFunctionKey(MfdFunctionKey key)
+    private void HandleWaypointEditFunctionKey(MfdFunctionKey key)
     {
         switch (key)
         {
+            // TacticalMapView.axaml.cs - in the speed-edit key handler
+            case MfdFunctionKey.L4:
+                if (_routeEditor.DeleteSelectedWaypoint())
+                {
+                    _routeLayer.SetRoute(_routeEditor.CurrentRoute, IsAssigned(_routeEditor.CurrentRoute));
+                    UpdateSelectedWaypointHighlight();
+                    UpdateSelectedWaypointSpeedDisplay();
+                    UpdateContextualIcons();
+                    MapControl.RefreshGraphics();
+                }
+                break;
+
             case MfdFunctionKey.L5:
                 if (_routeEditor.SelectedWaypointIndex == null)
                     return;
@@ -723,43 +735,37 @@ public partial class TacticalMapView : UserControl
     /// </summary>
     private void UpdateContextualIcons()
     {
-        // L1 is always available.
         CentreVehicleIcon.IsVisible = true;
 
         if (!_routeEditor.IsCreationMode)
         {
-            // Normal Tactical Map mode.
             SpeedIncreaseIndicator.IsVisible = false;
             SpeedDecreaseIndicator.IsVisible = false;
+            DeleteWaypointIndicator.IsVisible = false;
             RouteManagerIcon.IsVisible = true;
 
-            // When the Route Manager is displayed, L5/L6 navigate
-            // through the route collection.
-            bool routeManagerDisplayed =
-                RouteManagerControl.IsDisplayed;
-
+            bool routeManagerDisplayed = RouteManagerControl.IsDisplayed;
             CursorUpIndicator.IsVisible = routeManagerDisplayed;
             CursorDownIndicator.IsVisible = routeManagerDisplayed;
             AcceptRouteIndicator.IsVisible = routeManagerDisplayed;
             AssignedRouteIndicator.IsVisible = false;
 
             if ((_routeManager?.CurrentRoute != null) && (_routeManager.AssignedRoute == null))
-            {
                 AssignedRouteIndicator.IsVisible = true;
-            }
 
             return;
         }
 
         RouteManagerIcon.IsVisible = false;
+        CursorUpIndicator.IsVisible = false;
+        CursorDownIndicator.IsVisible = false;
+        AcceptRouteIndicator.IsVisible = false;
+        AssignedRouteIndicator.IsVisible = false;
 
-        // Route creation/editing mode.
-        bool waypointSelected =
-            _routeEditor.SelectedWaypointIndex != null;
-
-        // Speed editing mode.
+        bool waypointSelected = _routeEditor.SelectedWaypointIndex != null;
         SpeedIncreaseIndicator.IsVisible = waypointSelected;
         SpeedDecreaseIndicator.IsVisible = waypointSelected;
+        DeleteWaypointIndicator.IsVisible = _routeEditor.CanDeleteSelectedWaypoint;
     }
 
 

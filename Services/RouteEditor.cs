@@ -36,6 +36,8 @@ public sealed class RouteEditor
 
     public int? SelectedWaypointIndex => _selectedWaypointIndex;
 
+    // RouteEditor.cs
+    private const int MinimumWaypointCount = 2; // matches RoutePersistence's save-time minimum
 
     /// <summary>
     /// Toggles Route Creation Mode.
@@ -231,5 +233,31 @@ public sealed class RouteEditor
         Logger.Debug(
             "Adjusted speed of waypoint {WaypointIndex} by {Delta}. New speed: {NewSpeed}",
             index, delta, waypoint.Speed);
+    }
+
+    // RouteEditor.cs - unchanged from the previous message
+    public bool CanDeleteSelectedWaypoint =>
+        CurrentRoute != null &&
+        _selectedWaypointIndex != null &&
+        CurrentRoute.Waypoints.Count > MinimumWaypointCount;
+
+    public bool DeleteSelectedWaypoint()
+    {
+        if (!CanDeleteSelectedWaypoint)
+            return false;
+
+        int index = _selectedWaypointIndex!.Value;
+
+        CurrentRoute!.Waypoints.RemoveAt(index);
+        CurrentRoute.Modified = DateTime.UtcNow;
+
+        _selectedWaypointIndex = null;
+        _draggedWaypointIndex = null;
+
+        Logger.Debug(
+            "Deleted waypoint {WaypointIndex}. Waypoints remaining: {Count}",
+            index, CurrentRoute.Waypoints.Count);
+
+        return true;
     }
 }

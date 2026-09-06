@@ -102,6 +102,20 @@
                        Stretch="Uniform"/>
             </Border>
 
+            <!-- L4 - Delete Waypoint -->
+            <Border x:Name="DeleteWaypointIndicator"
+                    Grid.Row="3"
+                    Width="64"
+                    Height="64"
+                    Margin="4,0,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    IsVisible="False">
+
+                <Image Source="/Assets/Icons/delete_waypoint.png"
+                       Stretch="Uniform"/>
+            </Border>
+
             <!-- L5 - Speed Increase -->
             <Border x:Name="SpeedIncreaseIndicator"
                     Grid.Row="4"
