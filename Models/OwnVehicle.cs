@@ -7,7 +7,7 @@ namespace GBMS.Models;
 public sealed class OwnVehicle
 {
     private Route? _assignedRoute;
-    private int _currentWaypointIndex;
+    private Waypoint? _currentTargetWaypoint;
 
     public Position Position { get; set; } = new(0.0, 0.0, 0.0);
 
@@ -35,7 +35,9 @@ public sealed class OwnVehicle
     public void AssignRoute(Route? route)
     {
         _assignedRoute = route;
-        _currentWaypointIndex = 0;
+        _currentTargetWaypoint = route?.Waypoints.Count > 0
+            ? route.Waypoints[0]
+            : null;
     }
 
     /// <summary>
@@ -53,12 +55,11 @@ public sealed class OwnVehicle
             return;
         }
 
-        if (_currentWaypointIndex >= _assignedRoute.Waypoints.Count)
+        if (_currentTargetWaypoint == null ||
+            !_assignedRoute.Waypoints.Contains(_currentTargetWaypoint))
         {
-            // All waypoints reached - hold position and heading.
-            // (Not the same as the unassigned case: falling through to
-            // placeholder motion here would drive the vehicle straight past
-            // the final waypoint instead of stopping.)
+            // Target reached the end, or was deleted out from under
+            // navigation - hold position and heading rather than guessing.
             return;
         }
 
@@ -71,7 +72,7 @@ public sealed class OwnVehicle
     /// </summary>
     private void UpdateNavigating(TimeSpan simulationStep)
     {
-        Waypoint target = _assignedRoute!.Waypoints[_currentWaypointIndex];
+        Waypoint target = _currentTargetWaypoint!;
 
         double distanceToTargetMetres = Mapping.CalculateDistanceKm(
             Position.Latitude, Position.Longitude,
@@ -95,14 +96,12 @@ public sealed class OwnVehicle
 
         if (distanceToTargetMetres <= travelDistanceMetres)
         {
-            // Arrived. Snap position to the waypoint. Heading still respects
-            // the turn-rate limit rather than snapping to face the waypoint
-            // exactly - the vehicle finishes turning onto the next leg over
-            // subsequent ticks, same as any other heading change.
-            Position = new Position(
-                target.Latitude, target.Longitude, headingDegrees);
+            int targetIndex = _assignedRoute!.Waypoints.IndexOf(target);
+            int nextIndex = targetIndex + 1;
 
-            _currentWaypointIndex++;
+            _currentTargetWaypoint = nextIndex < _assignedRoute.Waypoints.Count
+                ? _assignedRoute.Waypoints[nextIndex]
+                : null;
 
             return;
         }
