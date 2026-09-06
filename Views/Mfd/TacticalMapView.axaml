@@ -88,6 +88,20 @@
                        Stretch="Uniform"/>
             </Border>
 
+            <!-- L4 - Delete Route -->
+            <Border x:Name="DeleteRouteIndicator"
+                    Grid.Row="3"
+                    Width="64"
+                    Height="64"
+                    Margin="4,0,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    IsVisible="False">
+
+                <Image Source="/Assets/Icons/delete_route.png"
+                       Stretch="Uniform"/>
+            </Border>
+
             <!-- L4 - Assigned Route -->
             <Border x:Name="AssignedRouteIndicator"
                     Grid.Row="3"

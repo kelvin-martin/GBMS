@@ -324,11 +324,11 @@
                             BorderThickness="0,1,0,0"
                             Padding="12,0">
 
-                        <TextBlock Text="NO ACTIVE WARNINGS"
+                        <TextBlock Text="{Binding AlertText}"
                                    VerticalAlignment="Center"
                                    HorizontalAlignment="Center"
                                    FontSize="13"
-                                   Foreground="#70C070"/>
+                                   Foreground="{Binding AlertForeground}"/>
 
                     </Border>
 
@@ -433,4 +433,3 @@
     </Border>
 
 </UserControl>
-

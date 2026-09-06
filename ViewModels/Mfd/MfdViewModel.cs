@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using GBMS.Services;
@@ -74,8 +75,39 @@ public partial class MfdViewModel : ObservableObject
 
     private readonly DispatcherTimer? _clockTimer;
 
+    private readonly Messenger? _messenger;
+
     public string SimulationTime =>
         _clock?.UtcNow.ToString("HH:mm:ss") ?? "--:--:--";
+
+    /// <summary>
+    /// Gets the text currently displayed in the Warnings and Alerts area.
+    /// Sourced from the application-wide <see cref="Messenger"/> - the only
+    /// route from deeply-nested controls (e.g. RouteManagerControl) up to
+    /// this top-level display, since neither owns a direct reference to
+    /// the other.
+    /// </summary>
+    [ObservableProperty]
+    private string _alertText = "NO ACTIVE WARNINGS";
+
+    /// <summary>
+    /// Gets whether the current alert text represents a high-urgency
+    /// warning (as opposed to routine/informational text).
+    /// </summary>
+    [ObservableProperty]
+    private bool _isAlertActive;
+
+    /// <summary>
+    /// Gets the foreground brush for the alert text, derived from
+    /// <see cref="IsAlertActive"/>.
+    /// </summary>
+    public IBrush AlertForeground =>
+        IsAlertActive ? Brushes.OrangeRed : Brushes.LightGreen;
+
+    partial void OnIsAlertActiveChanged(bool value)
+    {
+        OnPropertyChanged(nameof(AlertForeground));
+    }
 
     public MfdViewModel()
     {
@@ -90,6 +122,9 @@ public partial class MfdViewModel : ObservableObject
 
             _clockTimer.Tick += OnClockTimerTick;
             _clockTimer.Start();
+
+            _messenger = ApplicationFactory.Messenger;
+            _messenger.MessageReceived += OnMessageReceived;
         }
 
         UpdateCurrentContentViewModel();
@@ -180,5 +215,15 @@ public partial class MfdViewModel : ObservableObject
     private void OnClockTimerTick(object? sender, EventArgs e)
     {
         OnPropertyChanged(nameof(SimulationTime));
+    }
+
+    /// <summary>
+    /// Handles a message broadcast via the application Messenger, updating
+    /// the Warnings and Alerts area text and styling.
+    /// </summary>
+    private void OnMessageReceived(object? sender, AppMessage message)
+    {
+        AlertText = message.Message;
+        IsAlertActive = message.IsAlert;
     }
 }

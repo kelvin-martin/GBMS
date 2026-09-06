@@ -249,6 +249,14 @@ public partial class TacticalMapView : UserControl
     /// <param name="longitude">The longitude of the vehicle.</param>
     private void OnCentreMapOnVehicleRequested(double latitude, double longitude)
     {
+        // L1 is one of the buttons that cancels a pending route deletion
+        // while still performing its own normal action.
+        if (RouteManagerControl.IsDisplayed)
+        {
+            RouteManagerControl.CancelPendingDelete();
+            UpdateContextualIcons();
+        }
+
         const double extentKm = 10.0;
 
         Logger.Debug("SA Tactical Map centring on vehicle: Lat={Latitude}, Lon={Longitude}",
@@ -288,6 +296,12 @@ public partial class TacticalMapView : UserControl
     /// <param name="distanceKm">The distance to pan the map in kilometers.</param>
     private void OnPanRequested(MapPanDirection direction, double distanceKm)
     {
+        // R1-R6 (zoom/pan) are deliberately excluded from cancelling a
+        // pending route deletion - they're map-inspection tools, not
+        // route-management actions, so an operator can zoom or pan to
+        // confirm which route is highlighted without losing progress
+        // through the delete confirmation sequence.
+
         Logger.Debug("SA Tactical Map applying pan: Direction={Direction}, Distance={Distance} km",
             direction, distanceKm);
 
@@ -375,6 +389,13 @@ public partial class TacticalMapView : UserControl
     /// </summary>
     private void OnRouteCreationRequested()
     {
+        // L2 is one of the buttons that cancels a pending route deletion
+        // while still performing its own normal action.
+        if (RouteManagerControl.IsDisplayed)
+        {
+            RouteManagerControl.CancelPendingDelete();
+        }
+
         _routeEditor.ToggleCreationMode();
 
         if (!_routeEditor.IsCreationMode)
@@ -520,18 +541,6 @@ public partial class TacticalMapView : UserControl
         if (!point.Properties.IsLeftButtonPressed)
             return;
 
-        MPoint worldPosition =
-            MapControl.Map.Navigator.Viewport.ScreenToWorld(
-                point.Position.X, point.Position.Y);
-
-        var lonLat = SphericalMercator.ToLonLat(
-            worldPosition.X, worldPosition.Y);
-
-        // Before:
-        // MPoint worldPosition = MapControl.Map.Navigator.Viewport.ScreenToWorld(point.Position.X, point.Position.Y);
-        // var lonLat = SphericalMercator.ToLonLat(worldPosition.X, worldPosition.Y);
-        // int? waypointIndex = FindWaypointAtPosition(lonLat.lat, lonLat.lon);
-
         int? waypointIndex = FindWaypointAtScreenPosition(point.Position);
 
         if (waypointIndex == null)
@@ -662,7 +671,8 @@ public partial class TacticalMapView : UserControl
             case MfdFunctionKey.L4:
                 if (RouteManagerControl.IsDisplayed)
                 {
-                    RouteManagerControl.Select();
+                    RouteManagerControl.RequestAcceptOrDelete();
+                    UpdateContextualIcons();
                 }
                 else if (_routeManager != null &&
                          _routeManager.CurrentRoute != null &&
@@ -675,12 +685,14 @@ public partial class TacticalMapView : UserControl
                 if (RouteManagerControl.IsDisplayed)
                 {
                     RouteManagerControl.MoveSelectionUp();
+                    UpdateContextualIcons();
                 }
                 break;
             case MfdFunctionKey.L6:
                 if (RouteManagerControl.IsDisplayed)
                 {
                     RouteManagerControl.MoveSelectionDown();
+                    UpdateContextualIcons();
                 }
                 break;
         }
@@ -694,7 +706,6 @@ public partial class TacticalMapView : UserControl
     {
         switch (key)
         {
-            // TacticalMapView.axaml.cs - in the speed-edit key handler
             case MfdFunctionKey.L4:
                 if (_routeEditor.DeleteSelectedWaypoint())
                 {
@@ -747,11 +758,16 @@ public partial class TacticalMapView : UserControl
             bool routeManagerDisplayed = RouteManagerControl.IsDisplayed;
             CursorUpIndicator.IsVisible = routeManagerDisplayed;
             CursorDownIndicator.IsVisible = routeManagerDisplayed;
-            AcceptRouteIndicator.IsVisible = routeManagerDisplayed;
-            AssignedRouteIndicator.IsVisible = false;
 
-            if ((_routeManager?.CurrentRoute != null) && (_routeManager.AssignedRoute == null))
-                AssignedRouteIndicator.IsVisible = true;
+            bool pendingRouteDelete = routeManagerDisplayed && RouteManagerControl.IsPendingDelete;
+
+            AcceptRouteIndicator.IsVisible = routeManagerDisplayed && !pendingRouteDelete;
+            DeleteRouteIndicator.IsVisible = pendingRouteDelete;
+
+            AssignedRouteIndicator.IsVisible =
+                    !routeManagerDisplayed &&
+                    _routeManager?.CurrentRoute != null &&
+                    _routeManager.AssignedRoute == null;
 
             return;
         }
@@ -760,6 +776,7 @@ public partial class TacticalMapView : UserControl
         CursorUpIndicator.IsVisible = false;
         CursorDownIndicator.IsVisible = false;
         AcceptRouteIndicator.IsVisible = false;
+        DeleteRouteIndicator.IsVisible = false;
         AssignedRouteIndicator.IsVisible = false;
 
         bool waypointSelected = _routeEditor.SelectedWaypointIndex != null;
@@ -840,7 +857,18 @@ public partial class TacticalMapView : UserControl
     /// <param name="route">The new current route, or <c>null</c> if there is no current route.</param>
     private void OnCurrentRouteChanged(Route? route)
     {
-        if (route == null) return;
+        if (route == null)
+        {
+            // Route was cleared - e.g. as part of deleting the route that
+            // was currently displayed. RouteLayer holds no memory of a
+            // previous route between calls, so it must be told explicitly
+            // that there is nothing to draw, or it would keep rendering a
+            // route that no longer exists.
+            _routeEditor.SetRoute(null);
+            _routeLayer.Clear();
+            MapControl.RefreshGraphics();
+            return;
+        }
 
         _routeEditor.SetRoute(route);
 

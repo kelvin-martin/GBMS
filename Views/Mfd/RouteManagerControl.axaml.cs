@@ -16,6 +16,7 @@ namespace GBMS.Views.Mfd;
 public partial class RouteManagerControl : UserControl, INotifyPropertyChanged
 {
     private readonly RouteManager? _routeManager;
+    private readonly Messenger? _messenger;
 
     private readonly ObservableCollection<RouteDisplayItem> _displayRoutes = new();
 
@@ -23,7 +24,20 @@ public partial class RouteManagerControl : UserControl, INotifyPropertyChanged
     private int? _lastSelectedRouteId;
     private bool _isDisplayed;
 
+    // Tracks the accept/delete press sequence for the currently highlighted
+    // route. Deliberately independent of RouteManager.CurrentRoute - a route
+    // that already happened to be CurrentRoute from an earlier session must
+    // not be mistaken for "already pressed once in this sequence", or the
+    // very first L4 press on it would jump straight to arming for deletion.
+    private int? _lastAcceptedRouteId;
+    private bool _pendingDelete;
+
     public bool IsDisplayed => _isDisplayed;
+
+    /// <summary>
+    /// Gets whether a route deletion is currently pending confirmation.
+    /// </summary>
+    public bool IsPendingDelete => _pendingDelete;
 
     /// <summary>
     /// Gets the list of routes to display.
@@ -39,6 +53,8 @@ public partial class RouteManagerControl : UserControl, INotifyPropertyChanged
         if (!Design.IsDesignMode)
         {
             _routeManager = ApplicationFactory.RouteManager;
+            _messenger = ApplicationFactory.Messenger;
+
             _routeManager.RoutesChanged += OnRoutesChanged;
 
             RefreshRoutes();
@@ -58,6 +74,10 @@ public partial class RouteManagerControl : UserControl, INotifyPropertyChanged
         {
             RestoreSelection();
         }
+        else
+        {
+            CancelPendingDelete();
+        }
     }
 
     /// <summary>
@@ -70,10 +90,12 @@ public partial class RouteManagerControl : UserControl, INotifyPropertyChanged
             return;
         }
 
+        CancelPendingDelete();
+
         if (_selectedIndex > 0)
         {
             _selectedIndex--;
-
+            _lastSelectedRouteId = _displayRoutes[_selectedIndex].Route.Id;
             UpdateSelectionIndicators();
         }
     }
@@ -88,18 +110,34 @@ public partial class RouteManagerControl : UserControl, INotifyPropertyChanged
             return;
         }
 
+        CancelPendingDelete();
+
         if (_selectedIndex < _displayRoutes.Count - 1)
         {
             _selectedIndex++;
-
+            _lastSelectedRouteId = _displayRoutes[_selectedIndex].Route.Id;
             UpdateSelectionIndicators();
         }
     }
 
     /// <summary>
-    /// Selects the currently highlighted route for display.
+    /// Handles an L4 ("Accept") press while Route Manager is displayed.
+    /// Implements the three-press select/arm/confirm sequence:
+    /// <list type="bullet">
+    /// <item>Press 1 - selects the highlighted route for display (existing
+    /// behaviour, unchanged).</item>
+    /// <item>Press 2, same route still highlighted - arms it for deletion,
+    /// unless it is the route currently assigned to Own Vehicle (which can
+    /// never be deleted - this simply falls back to a harmless re-select
+    /// instead of arming).</item>
+    /// <item>Press 3, same route still armed and highlighted - confirms and
+    /// deletes it.</item>
+    /// </list>
+    /// Cursor movement or hiding Route Manager resets this sequence (see
+    /// <see cref="MoveSelectionUp"/>, <see cref="MoveSelectionDown"/>,
+    /// <see cref="Show"/>, and <see cref="CancelPendingDelete"/>).
     /// </summary>
-    public void Select()
+    public void RequestAcceptOrDelete()
     {
         if (_routeManager == null) return;
 
@@ -110,28 +148,91 @@ public partial class RouteManagerControl : UserControl, INotifyPropertyChanged
             return;
         }
 
-        _lastSelectedRouteId = item.Route.Id;
+        int routeId = item.Route.Id;
 
-        _routeManager.SelectRoute(item.Route.Id);
+        bool isAssigned = ReferenceEquals(
+            item.Route, _routeManager.AssignedRoute);
 
-        Logger.Debug($"Route {item.Route.Id} selected for display.");
+        if (_pendingDelete && _lastAcceptedRouteId == routeId)
+        {
+            ConfirmDelete(item);
+            return;
+        }
+
+        if (_lastAcceptedRouteId == routeId && !isAssigned)
+        {
+            ArmForDeletion(routeId);
+            return;
+        }
+
+        _lastAcceptedRouteId = routeId;
+        _pendingDelete = false;
+
+        _lastSelectedRouteId = routeId;   // restores cursor position on next Show(true)
+
+        _routeManager.SelectRoute(routeId);
+
+        Logger.Debug($"Route {routeId} selected for display.");
     }
 
     /// <summary>
-    /// Deletes the currently highlighted route.
+    /// Arms the given route for deletion (press 2 of the sequence) and
+    /// raises the corresponding warning via the application Messenger.
     /// </summary>
-    public void Delete()
+    private void ArmForDeletion(int routeId)
+    {
+        _pendingDelete = true;
+
+        _messenger?.Send(
+            $"ROUTE {routeId:000} WILL BE DELETED - PRESS L4 TO CONFIRM",
+            isAlert: true);
+
+        Logger.Debug($"Route {routeId} armed for deletion.");
+    }
+
+    /// <summary>
+    /// Confirms and performs deletion of the given route (press 3 of the
+    /// sequence).
+    /// </summary>
+    private void ConfirmDelete(RouteDisplayItem item)
     {
         if (_routeManager == null) return;
 
-        RouteDisplayItem? item = GetSelectedItem();
+        int routeId = item.Route.Id;
 
-        if (item == null)
+        // This route reached press 3 via press 1 of the same sequence,
+        // which already made it CurrentRoute - RemoveRoute refuses to
+        // delete CurrentRoute, so it must be cleared first. Checked rather
+        // than assumed, consistent with defensive checks used elsewhere
+        // (e.g. OwnVehicle's target-waypoint Contains check).
+        if (ReferenceEquals(_routeManager.CurrentRoute, item.Route))
         {
-            return;
+            _routeManager.ClearCurrentRoute();
         }
 
-        _routeManager.RemoveRoute(item.Route.Id);
+        _routeManager.RemoveRoute(routeId);
+
+        Logger.Debug($"Route {routeId} deleted.");
+
+        CancelPendingDelete();
+    }
+
+    /// <summary>
+    /// Cancels any pending route deletion and clears the alert bar if a
+    /// warning was showing. Safe to call unconditionally - a no-op if
+    /// nothing is currently pending.
+    /// </summary>
+    public void CancelPendingDelete()
+    {
+        if (_pendingDelete)
+        {
+            _messenger?.Send("NO ACTIVE WARNINGS", isAlert: false);
+
+            Logger.Debug("Pending route deletion cancelled.");
+        }
+
+        _lastAcceptedRouteId = null;
+        _pendingDelete = false;
     }
 
     /// <summary>
@@ -201,6 +302,14 @@ public partial class RouteManagerControl : UserControl, INotifyPropertyChanged
     private void RefreshRoutes()
     {
         if (_routeManager == null) return;
+
+        // The route list just changed shape - any pending deletion sequence
+        // no longer refers to trustworthy state, so reset it defensively.
+        // This also covers the case where ConfirmDelete's own RemoveRoute
+        // call triggers this same refresh via RoutesChanged -
+        // CancelPendingDelete is idempotent, so no duplicate alert-clear is
+        // sent in that case.
+        CancelPendingDelete();
 
         _displayRoutes.Clear();
 
@@ -327,7 +436,7 @@ public partial class RouteManagerControl : UserControl, INotifyPropertyChanged
                 minutes = 0;
             }
 
-            return $"{degrees:00}°{minutes:00}'{hemisphere}";
+            return $"{degrees:00}Â°{minutes:00}'{hemisphere}";
         }
 
         /// <summary>
@@ -349,7 +458,7 @@ public partial class RouteManagerControl : UserControl, INotifyPropertyChanged
                 minutes = 0;
             }
 
-            return $"{degrees:000}°{minutes:00}'{hemisphere}";
+            return $"{degrees:000}Â°{minutes:00}'{hemisphere}";
         }
     }
 }
