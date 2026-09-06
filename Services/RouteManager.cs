@@ -21,6 +21,11 @@ public class RouteManager
     public event Action<Route?>? CurrentRouteChanged;
 
     /// <summary>
+    /// Raised when the route assigned to Own Vehicle changes.
+    /// </summary>
+    public event Action<Route?>? AssignedRouteChanged;
+
+    /// <summary>
     /// Gets all routes currently available to the application.
     /// </summary>
     public IReadOnlyList<Route> Routes => _routes;
@@ -29,6 +34,13 @@ public class RouteManager
     /// Gets the route currently displayed on the Tactical Map.
     /// </summary>
     public Route? CurrentRoute { get; private set; }
+
+    /// <summary>
+    /// Gets the route currently assigned to Own Vehicle, if any.
+    /// Independent of <see cref="CurrentRoute"/> - a route can be displayed
+    /// without being assigned, and assigned without being displayed.
+    /// </summary>
+    public Route? AssignedRoute { get; private set; }
 
     public RouteManager(IRoutePersistence persistence)
     {
@@ -53,6 +65,7 @@ public class RouteManager
         Logger.Debug($"Loaded {_routes.Count} routes from persistent storage.");
 
         CurrentRoute = null;
+        AssignedRoute = null;
     }
 
     /// <summary>
@@ -92,6 +105,30 @@ public class RouteManager
         CurrentRoute = null;
 
         CurrentRouteChanged?.Invoke(null);
+    }
+
+    /// <summary>
+    /// Assigns a route to Own Vehicle.
+    /// </summary>
+    public void AssignRoute(int routeId)
+    {
+        Route? route = _routes.FirstOrDefault(
+            r => r.Id == routeId);
+
+        if (route == null)
+        {
+            throw new InvalidOperationException(
+                $"Route {routeId} does not exist.");
+        }
+
+        if (ReferenceEquals(AssignedRoute, route))
+        {
+            return;
+        }
+
+        AssignedRoute = route;
+
+        AssignedRouteChanged?.Invoke(AssignedRoute);
     }
 
     /// <summary>
@@ -147,6 +184,12 @@ public class RouteManager
         {
             throw new InvalidOperationException(
                 $"Route {routeId} is currently displayed and cannot be removed.");
+        }
+
+        if (ReferenceEquals(AssignedRoute, route))
+        {
+            throw new InvalidOperationException(
+                $"Route {routeId} is currently assigned to Own Vehicle and cannot be removed.");
         }
 
         _persistence.Delete(route);

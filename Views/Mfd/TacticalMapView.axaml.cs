@@ -71,8 +71,19 @@ public partial class TacticalMapView : UserControl
         _routeEditor = new RouteEditor();
         _routeEditor.CreationModeChanged += OnRouteCreationModeChanged;
 
-        _routeManager = ApplicationFactory.RouteManager;
-        _routeManager.CurrentRouteChanged += OnCurrentRouteChanged;
+        if (!Design.IsDesignMode)
+        {
+            _routeManager = ApplicationFactory.RouteManager;
+            if (_routeManager == null)
+            {
+                Logger.Error("RouteManager service is not available.");
+            }
+            else
+            {
+                _routeManager.CurrentRouteChanged += OnCurrentRouteChanged;
+                _routeManager.AssignedRouteChanged += OnAssignedRouteChanged;
+            }
+        }
 
         _routeCreationIcon = new Bitmap(AssetLoader.Open(
         new Uri("avares://GBMS/Assets/Icons/route_creation.png")));
@@ -417,7 +428,7 @@ public partial class TacticalMapView : UserControl
 
         Waypoint waypoint = _routeEditor.AddWaypoint(position.lat, position.lon);
 
-        _routeLayer.SetRoute(_routeEditor.CurrentRoute);
+        _routeLayer.SetRoute(_routeEditor.CurrentRoute, false);
 
         MapControl.RefreshGraphics();
 
@@ -547,7 +558,7 @@ public partial class TacticalMapView : UserControl
 
         UpdateSelectedWaypointHighlight();
 
-        _routeLayer.SetRoute(_routeEditor.CurrentRoute);
+        _routeLayer.SetRoute(_routeEditor.CurrentRoute, false);
 
         MapControl.RefreshGraphics();
     }
@@ -627,6 +638,11 @@ public partial class TacticalMapView : UserControl
                 {
                     RouteManagerControl.Select();
                 }
+                else if (_routeManager != null && _routeManager.CurrentRoute != null &&
+                    !ReferenceEquals(_routeManager.CurrentRoute, _routeManager.AssignedRoute))
+                {
+                    _routeManager.AssignRoute(_routeManager.CurrentRoute.Id);
+                }
                 break;
             case MfdFunctionKey.L5:
                 if (RouteManagerControl.IsDisplayed)
@@ -657,7 +673,7 @@ public partial class TacticalMapView : UserControl
 
                 _routeEditor.AdjustSelectedWaypointSpeed(+1);
 
-                _routeLayer.SetRoute(_routeEditor.CurrentRoute!);
+                _routeLayer.SetRoute(_routeEditor.CurrentRoute, false!);
                 UpdateSelectedWaypointSpeedDisplay();
                 MapControl.RefreshGraphics();
                 break;
@@ -668,7 +684,7 @@ public partial class TacticalMapView : UserControl
 
                 _routeEditor.AdjustSelectedWaypointSpeed(-1);
 
-                _routeLayer.SetRoute(_routeEditor.CurrentRoute!);
+                _routeLayer.SetRoute(_routeEditor.CurrentRoute!, false);
                 UpdateSelectedWaypointSpeedDisplay();
                 MapControl.RefreshGraphics();
                 break;
@@ -698,6 +714,13 @@ public partial class TacticalMapView : UserControl
             CursorUpIndicator.IsVisible = routeManagerDisplayed;
             CursorDownIndicator.IsVisible = routeManagerDisplayed;
             AcceptRouteIndicator.IsVisible = routeManagerDisplayed;
+            AssignedRouteIndicator.IsVisible = false;
+
+
+            if ((_routeManager?.CurrentRoute != null) && (_routeManager.AssignedRoute == null))
+            {
+                AssignedRouteIndicator.IsVisible = true;
+            }
 
             return;
         }
@@ -804,7 +827,28 @@ public partial class TacticalMapView : UserControl
 
         _routeEditor.SetRoute(route);
 
-        _routeLayer.SetRoute(route);
+        bool isAssigned = ReferenceEquals(route, _routeManager?.AssignedRoute);
+
+        _routeLayer.SetRoute(route, isAssigned);
+        MapControl.RefreshGraphics();
+    }
+
+    /// <summary>
+    /// Handles the AssignedRouteChanged event from the RouteManager.
+    /// Restyles the currently displayed route if its assigned status has changed
+    /// - e.g. assigning the route currently on display should restyle it immediately,
+    /// without CurrentRoute itself changing.
+    /// </summary>
+    /// <param name="route">The newly assigned route, or <c>null</c> if none is assigned.</param>
+    private void OnAssignedRouteChanged(Route? route)
+    {
+        Route? displayedRoute = _routeManager?.CurrentRoute;
+
+        if (displayedRoute == null) return;
+
+        bool isAssigned = ReferenceEquals(displayedRoute, route);
+
+        _routeLayer.SetRoute(displayedRoute, isAssigned);
         MapControl.RefreshGraphics();
     }
 }

@@ -68,16 +68,33 @@ public sealed class RouteLayer
         };
     }
 
-    private static VectorStyle CreateRouteLineStyle()
+    private static Color RouteColor(bool isAssigned)
+    {
+        return isAssigned ? Color.Blue : Color.Red;
+    }
+
+    private static VectorStyle CreateRouteLineStyle(bool isAssigned)
     {
         return new VectorStyle
         {
-            Line = new Pen(Color.Red, 2)
+            Line = new Pen(RouteColor(isAssigned), 2)
         };
     }
 
-    public void SetRoute(Route route)
+    /// <summary>
+    /// Sets the complete presentation state for this layer: the route to draw (or
+    /// null to clear it) and whether it should be rendered as the route currently
+    /// assigned to Own Vehicle. This layer holds no state between calls - callers
+    /// must pass the full state every time.
+    /// </summary>
+    public void SetRoute(Route? route, bool isAssigned)
     {
+        if (route == null)
+        {
+            Clear();
+            return;
+        }
+
         var features = new List<IFeature>();
 
         // Add route line.
@@ -102,7 +119,7 @@ public sealed class RouteLayer
 
             var lineFeature = new GeometryFeature(lineString);
 
-            lineFeature.Styles.Add(CreateRouteLineStyle());
+            lineFeature.Styles.Add(CreateRouteLineStyle(isAssigned));
 
             features.Add(lineFeature);
         }
@@ -119,7 +136,7 @@ public sealed class RouteLayer
             var feature = new PointFeature(
                 new MPoint(position.x, position.y));
 
-            feature.Styles.Add(CreateWaypointStyle());
+            feature.Styles.Add(CreateWaypointStyle(isAssigned));
             feature.Styles.Add(CreateWaypointNumberStyle(i + 1));
 
             features.Add(feature);
@@ -135,13 +152,13 @@ public sealed class RouteLayer
         _layer.FeaturesWereModified();
     }
 
-    private static SymbolStyle CreateWaypointStyle()
+    private static SymbolStyle CreateWaypointStyle(bool isAssigned)
     {
         return new SymbolStyle
         {
             SymbolType = SymbolType.Ellipse,
             SymbolScale = 0.5,
-            Fill = new Brush(Color.Red),
+            Fill = new Brush(RouteColor(isAssigned)),
             Outline = new Pen(Color.White, 2)
         };
     }
