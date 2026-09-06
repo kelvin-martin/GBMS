@@ -33,9 +33,6 @@ public class SimulationManager
 
         _routeManager = ApplicationFactory.RouteManager;
 
-        if (_routeManager == null)
-            throw new InvalidOperationException("RouteManager is not initialized.");
-
         _routeManager.AssignedRouteChanged += OnAssignedRouteChanged;
     }
 

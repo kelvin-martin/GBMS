@@ -400,6 +400,18 @@ public partial class TacticalMapView : UserControl
     }
 
     /// <summary>
+    /// Determines whether the given route is the one currently assigned to
+    /// Own Vehicle, for route-styling purposes. Centralised so every call
+    /// site that sets RouteLayer's assigned flag uses the same comparison -
+    /// this is what the route-turns-red-during-edit bug was missing.
+    /// </summary>
+    /// <param name="route">The route to check, or <c>null</c>.</param>
+    private bool IsAssigned(Route? route)
+    {
+        return route != null && ReferenceEquals(route, _routeManager?.AssignedRoute);
+    }
+
+    /// <summary>
     /// Handles the MapTapped event from the MapControl.
     /// This method is called when the user taps on the map, and it adds a new waypoint to 
     /// the current route if route creation mode is enabled.
@@ -428,7 +440,7 @@ public partial class TacticalMapView : UserControl
 
         Waypoint waypoint = _routeEditor.AddWaypoint(position.lat, position.lon);
 
-        _routeLayer.SetRoute(_routeEditor.CurrentRoute, false);
+        _routeLayer.SetRoute(_routeEditor.CurrentRoute, IsAssigned(_routeEditor.CurrentRoute));
 
         MapControl.RefreshGraphics();
 
@@ -558,7 +570,7 @@ public partial class TacticalMapView : UserControl
 
         UpdateSelectedWaypointHighlight();
 
-        _routeLayer.SetRoute(_routeEditor.CurrentRoute, false);
+        _routeLayer.SetRoute(_routeEditor.CurrentRoute, IsAssigned(_routeEditor.CurrentRoute));
 
         MapControl.RefreshGraphics();
     }
@@ -673,7 +685,8 @@ public partial class TacticalMapView : UserControl
 
                 _routeEditor.AdjustSelectedWaypointSpeed(+1);
 
-                _routeLayer.SetRoute(_routeEditor.CurrentRoute, false!);
+                _routeLayer.SetRoute(_routeEditor.CurrentRoute, IsAssigned(_routeEditor.CurrentRoute));
+
                 UpdateSelectedWaypointSpeedDisplay();
                 MapControl.RefreshGraphics();
                 break;
@@ -684,7 +697,8 @@ public partial class TacticalMapView : UserControl
 
                 _routeEditor.AdjustSelectedWaypointSpeed(-1);
 
-                _routeLayer.SetRoute(_routeEditor.CurrentRoute!, false);
+                _routeLayer.SetRoute(_routeEditor.CurrentRoute!, IsAssigned(_routeEditor.CurrentRoute));
+
                 UpdateSelectedWaypointSpeedDisplay();
                 MapControl.RefreshGraphics();
                 break;
@@ -827,7 +841,7 @@ public partial class TacticalMapView : UserControl
 
         _routeEditor.SetRoute(route);
 
-        bool isAssigned = ReferenceEquals(route, _routeManager?.AssignedRoute);
+        bool isAssigned = IsAssigned(route);
 
         _routeLayer.SetRoute(route, isAssigned);
         MapControl.RefreshGraphics();
