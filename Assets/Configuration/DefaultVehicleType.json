@@ -1,0 +1,9 @@
+﻿{
+  "vehicleTypeId": "Default",
+  "displayName": "Default Vehicle",
+  "minSpeedKmh": 0,
+  "maxSpeedKmh": 108,
+  "maxTurnRateDegreesPerSecond": 15.0,
+  "minAccelerationMetresPerSecondSquared": -3.0,
+  "maxAccelerationMetresPerSecondSquared": 2.0
+}

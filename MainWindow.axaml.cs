@@ -1,7 +1,5 @@
-﻿using System.Diagnostics;
-using Avalonia.Controls;
+﻿using Avalonia.Controls;
 using GBMS.Services;
-using GBMS.Simulation;
 
 namespace GBMS;
 
@@ -14,6 +12,8 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
+        // Test data ...
+
         ApplicationFactory.Initialize();
 
         _simManager = ApplicationFactory.SimulationManager;

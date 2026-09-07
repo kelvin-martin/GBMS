@@ -25,9 +25,7 @@
   <ItemGroup>
     <AvaloniaResource Include="Assets\TacticalSymbols\**\*.svg" />
     <AvaloniaResource Include="Assets\Icons\**\*.png" />
+    <AvaloniaResource Include="Assets\Configuration\**\*.json" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Assets\Icons\" />
-  </ItemGroup>
 </Project>

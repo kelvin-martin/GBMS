@@ -18,6 +18,7 @@ class Program
 
         try
         {
+            Log.Information("=========================");
             Log.Information("GBMS application starting.");
 
             BuildAvaloniaApp()
