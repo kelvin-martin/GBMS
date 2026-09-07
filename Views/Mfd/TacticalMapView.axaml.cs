@@ -389,8 +389,6 @@ public partial class TacticalMapView : UserControl
     /// </summary>
     private void OnRouteCreationRequested()
     {
-        // L2 is one of the buttons that cancels a pending route deletion
-        // while still performing its own normal action.
         if (RouteManagerControl.IsDisplayed)
         {
             RouteManagerControl.CancelPendingDelete();
@@ -402,9 +400,22 @@ public partial class TacticalMapView : UserControl
         {
             _routeEditor.ClearSelection();
 
-            if ((_routeEditor.CurrentRoute != null) && (_routeManager != null))
+            if (_routeEditor.CurrentRoute != null && _routeManager != null)
             {
-                _routeManager.AddRoute(_routeEditor.CurrentRoute);
+                Route editedRoute = _routeEditor.CurrentRoute;
+
+                _routeManager.AddRoute(editedRoute);
+
+                // Auto-select on exit so the route is immediately assignable
+                // via L4, without a trip through Route Manager. Skipped while
+                // a route is already assigned - Route Manager is locked out
+                // in that state, so selecting something else here would leave
+                // the assigned route with no path back onto the map until
+                // unassigned.
+                if (_routeManager.AssignedRoute == null)
+                {
+                    _routeManager.SelectRoute(editedRoute.Id);
+                }
             }
         }
         else

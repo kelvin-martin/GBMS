@@ -21,7 +21,7 @@ public sealed class RouteEditor
     public bool IsCreationMode { get; private set; }
 
     // Waypoint speed limits for the Tactical Map route editor.
-    private const int DefaultWaypointSpeed = 30;
+    private const int DefaultWaypointSpeed = 45;
     private const int MinimumWaypointSpeed = 10;
     private const int MaximumWaypointSpeed = 70;
 

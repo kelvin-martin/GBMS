@@ -11,8 +11,13 @@ public sealed class OwnVehicle
 
     public Position Position { get; set; } = new(0.0, 0.0, 0.0);
 
-    // Fixed velocity for the placeholder straight-bearing movement. Metres/second.
-    public double Speed { get; } = 30;   // m/s
+    /// <summary>
+    /// Current vehicle speed, in metres/second. Zero while stationary (no
+    /// route assigned, or the assigned route has been fully navigated).
+    /// While navigating, set each tick to the current target waypoint's
+    /// speed, converted from km/h.
+    /// </summary>
+    public double Speed { get; private set; } = 0.0;
 
     /// <summary>
     /// Maximum rate at which Own Vehicle can change heading while navigating,
@@ -51,7 +56,9 @@ public sealed class OwnVehicle
 
         if (_assignedRoute == null)
         {
-            UpdatePlaceholder(simulationStep);
+            // No route assigned - Own Vehicle remains stationary until one is.
+            // This replaces the previous straight-bearing placeholder motion.
+            Speed = 0.0;
             return;
         }
 
@@ -60,11 +67,13 @@ public sealed class OwnVehicle
         {
             // Target reached the end, or was deleted out from under
             // navigation - hold position and heading rather than guessing.
+            Speed = 0.0;
             return;
         }
 
         UpdateNavigating(simulationStep);
     }
+
 
     /// <summary>
     /// Moves the vehicle toward its current target waypoint, advancing to the
@@ -89,10 +98,9 @@ public sealed class OwnVehicle
             Position.Heading, desiredBearingDegrees, maxTurnThisTickDegrees);
 
         // Waypoint speed is km/h; vehicle motion here works in metres/second.
-        double speedMetresPerSecond = target.Speed / 3.6;
+        Speed = target.Speed / 3.6;
 
-        double travelDistanceMetres =
-            speedMetresPerSecond * simulationStep.TotalSeconds;
+        double travelDistanceMetres = Speed * simulationStep.TotalSeconds;
 
         if (distanceToTargetMetres <= travelDistanceMetres)
         {
@@ -111,22 +119,6 @@ public sealed class OwnVehicle
             headingDegrees, travelDistanceMetres / 1000.0);
 
         Position = new Position(newLatitude, newLongitude, headingDegrees);
-    }
-
-    /// <summary>
-    /// Existing placeholder motion: straight bearing at fixed speed. Unchanged
-    /// from the original behaviour - used whenever no route is assigned.
-    /// </summary>
-    private void UpdatePlaceholder(TimeSpan simulationStep)
-    {
-        double distanceMetres =
-            Speed * simulationStep.TotalSeconds;
-
-        var (newLatitude, newLongitude) = Mapping.ProjectPosition(
-            Position.Latitude, Position.Longitude,
-            Position.Heading, distanceMetres / 1000.0);
-
-        Position = new Position(newLatitude, newLongitude, Position.Heading);
     }
 
     /// <summary>
