@@ -1,0 +1,9 @@
+{
+  "vehicleTypeId": "AlvisStormer",
+  "displayName": "Alvis Stormer",
+  "minSpeedKmh": 0,
+  "maxSpeedKmh": 80,
+  "maxTurnRateDegreesPerSecond": 15.0,
+  "minAccelerationMetresPerSecondSquared": -3.0,
+  "maxAccelerationMetresPerSecondSquared": 2.0
+}

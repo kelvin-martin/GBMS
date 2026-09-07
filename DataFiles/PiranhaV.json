@@ -1,0 +1,9 @@
+{
+  "vehicleTypeId": "PiranhaV",
+  "displayName": "Piranha V",
+  "minSpeedKmh": 0,
+  "maxSpeedKmh": 100,
+  "maxTurnRateDegreesPerSecond": 15.0,
+  "minAccelerationMetresPerSecondSquared": -3.0,
+  "maxAccelerationMetresPerSecondSquared": 2.0
+}

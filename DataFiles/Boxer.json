@@ -1,0 +1,9 @@
+{
+  "vehicleTypeId": "Boxer",
+  "displayName": "Boxer",
+  "minSpeedKmh": 0,
+  "maxSpeedKmh": 103,
+  "maxTurnRateDegreesPerSecond": 15.0,
+  "minAccelerationMetresPerSecondSquared": -3.0,
+  "maxAccelerationMetresPerSecondSquared": 2.0
+}

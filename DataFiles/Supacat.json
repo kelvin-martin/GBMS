@@ -1,0 +1,9 @@
+{
+  "vehicleTypeId": "Supacat",
+  "displayName": "Supacat HMT 600",
+  "minSpeedKmh": 0,
+  "maxSpeedKmh": 120,
+  "maxTurnRateDegreesPerSecond": 15.0,
+  "minAccelerationMetresPerSecondSquared": -3.0,
+  "maxAccelerationMetresPerSecondSquared": 2.0
+}
