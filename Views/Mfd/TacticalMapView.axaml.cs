@@ -664,23 +664,34 @@ public partial class TacticalMapView : UserControl
         switch (key)
         {
             case MfdFunctionKey.L3:
-                RouteManagerControl.Show(
-                    !RouteManagerControl.IsDisplayed);
-                UpdateContextualIcons();
+                // Route Manager cannot be opened while a route is assigned -
+                // the operator must unassign first (L4) before browsing.
+                if (_routeManager?.AssignedRoute == null)
+                {
+                    RouteManagerControl.Show(
+                        !RouteManagerControl.IsDisplayed);
+                    UpdateContextualIcons();
+                }
                 break;
+
             case MfdFunctionKey.L4:
                 if (RouteManagerControl.IsDisplayed)
                 {
                     RouteManagerControl.RequestAcceptOrDelete();
                     UpdateContextualIcons();
                 }
-                else if (_routeManager != null &&
-                         _routeManager.CurrentRoute != null &&
-                         !ReferenceEquals(_routeManager.CurrentRoute, _routeManager.AssignedRoute))
+                else if (_routeManager?.AssignedRoute != null)
+                {
+                    _routeManager.ClearAssignedRoute();
+                    UpdateContextualIcons();
+                }
+                else if (_routeManager?.CurrentRoute != null)
                 {
                     _routeManager.AssignRoute(_routeManager.CurrentRoute.Id);
+                    UpdateContextualIcons();
                 }
                 break;
+
             case MfdFunctionKey.L5:
                 if (RouteManagerControl.IsDisplayed)
                 {
@@ -688,6 +699,7 @@ public partial class TacticalMapView : UserControl
                     UpdateContextualIcons();
                 }
                 break;
+
             case MfdFunctionKey.L6:
                 if (RouteManagerControl.IsDisplayed)
                 {
@@ -753,9 +765,14 @@ public partial class TacticalMapView : UserControl
             SpeedIncreaseIndicator.IsVisible = false;
             SpeedDecreaseIndicator.IsVisible = false;
             DeleteWaypointIndicator.IsVisible = false;
-            RouteManagerIcon.IsVisible = true;
 
+            bool hasAssignedRoute = _routeManager?.AssignedRoute != null;
             bool routeManagerDisplayed = RouteManagerControl.IsDisplayed;
+
+            // Route Manager is unreachable while a route is assigned, so its
+            // icon reflects availability, not just current visibility.
+            RouteManagerIcon.IsVisible = !hasAssignedRoute;
+
             CursorUpIndicator.IsVisible = routeManagerDisplayed;
             CursorDownIndicator.IsVisible = routeManagerDisplayed;
 
@@ -764,10 +781,17 @@ public partial class TacticalMapView : UserControl
             AcceptRouteIndicator.IsVisible = routeManagerDisplayed && !pendingRouteDelete;
             DeleteRouteIndicator.IsVisible = pendingRouteDelete;
 
+            // L4 shows exactly one of: assign / unassign / nothing - these
+            // three states are now mutually exclusive by construction, since
+            // Route Manager can't be open while a route is assigned.
             AssignedRouteIndicator.IsVisible =
-                    !routeManagerDisplayed &&
-                    _routeManager?.CurrentRoute != null &&
-                    _routeManager.AssignedRoute == null;
+                !routeManagerDisplayed &&
+                !hasAssignedRoute &&
+                _routeManager?.CurrentRoute != null;
+
+            UnassignRouteIndicator.IsVisible =
+                !routeManagerDisplayed &&
+                hasAssignedRoute;
 
             return;
         }
@@ -778,6 +802,7 @@ public partial class TacticalMapView : UserControl
         AcceptRouteIndicator.IsVisible = false;
         DeleteRouteIndicator.IsVisible = false;
         AssignedRouteIndicator.IsVisible = false;
+        UnassignRouteIndicator.IsVisible = false;
 
         bool waypointSelected = _routeEditor.SelectedWaypointIndex != null;
         SpeedIncreaseIndicator.IsVisible = waypointSelected;

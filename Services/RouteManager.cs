@@ -132,6 +132,27 @@ public class RouteManager
     }
 
     /// <summary>
+    /// Clears the route assigned to Own Vehicle, if any, allowing a different
+    /// route to be selected and assigned. Also clears CurrentRoute - Route
+    /// Manager only ever displays the assigned route while an assignment is
+    /// active, so ending the assignment should return the map to blank rather
+    /// than leaving a stale route on screen.
+    /// </summary>
+    public void ClearAssignedRoute()
+    {
+        if (AssignedRoute == null)
+        {
+            return;
+        }
+
+        AssignedRoute = null;
+
+        AssignedRouteChanged?.Invoke(null);
+
+        ClearCurrentRoute();
+    }
+
+    /// <summary>
     /// Adds a new route to the Route Manager and persists it.
     /// </summary>
     public void AddRoute(Route route)
@@ -198,4 +219,6 @@ public class RouteManager
 
         RoutesChanged?.Invoke();
     }
+
+
 }

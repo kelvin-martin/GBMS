@@ -116,6 +116,20 @@
                        Stretch="Uniform"/>
             </Border>
 
+            <!-- L4 - Unassign Route -->
+            <Border x:Name="UnassignRouteIndicator"
+                    Grid.Row="3"
+                    Width="64"
+                    Height="64"
+                    Margin="4,0,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    IsVisible="False">
+
+                <Image Source="/Assets/Icons/route_unassign.png"
+                       Stretch="Uniform"/>
+            </Border>
+
             <!-- L4 - Delete Waypoint -->
             <Border x:Name="DeleteWaypointIndicator"
                     Grid.Row="3"

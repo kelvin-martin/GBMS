@@ -1,0 +1,11 @@
+# Ignore all binary files and resources
+*.dll
+*.exe
+*.png
+*.jpg
+*.res
+*.resx
+
+# Ignore a specific assets directory
+Assets\Icons
+Assets\TacticalSymbols
