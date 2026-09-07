@@ -9,26 +9,45 @@ public sealed class OwnVehicle
     private Route? _assignedRoute;
     private Waypoint? _currentTargetWaypoint;
 
-    public Position Position { get; set; } = new(0.0, 0.0, 0.0);
+    private readonly double _minSpeedMetresPerSecond;
+    private readonly double _maxSpeedMetresPerSecond;
+
+    public Position Position { get; set; }
 
     /// <summary>
     /// Current vehicle speed, in metres/second. Zero while stationary (no
     /// route assigned, or the assigned route has been fully navigated).
     /// While navigating, set each tick to the current target waypoint's
-    /// speed, converted from km/h.
+    /// speed, converted from km/h and clamped to this vehicle's
+    /// configured [MinSpeedKmh, MaxSpeedKmh].
     /// </summary>
     public double Speed { get; private set; } = 0.0;
 
     /// <summary>
-    /// Maximum rate at which Own Vehicle can change heading while navigating,
-    /// in degrees per second. Configurable - defaults to a mid-range value
-    /// (10-20°/s discussed) pending a real vehicle specification.
+    /// Maximum rate at which Own Vehicle can change heading while
+    /// navigating, in degrees per second. Fixed by vehicle configuration -
+    /// see GBMS_Vehicle_Configuration_Design.md §6.
     /// </summary>
-    public double MaxTurnRateDegreesPerSecond { get; set; } = 15.0;
+    public double MaxTurnRateDegreesPerSecond { get; }
 
-    public OwnVehicle()
+    /// <summary>
+    /// Constructs Own Vehicle from a resolved vehicle type and starting
+    /// scenario state.
+    /// </summary>
+    /// <param name="vehicleType">The resolved vehicle type capabilities.</param>
+    /// <param name="scenario">The starting position/heading for this run.</param>
+    public OwnVehicle(VehicleType vehicleType, ScenarioConfiguration scenario)
     {
-        Position = new Position(51.24708, -2.08829, 90.0);
+        ArgumentNullException.ThrowIfNull(vehicleType);
+        ArgumentNullException.ThrowIfNull(scenario);
+
+        Position = new Position(
+            scenario.StartLatitude, scenario.StartLongitude, scenario.StartHeading);
+
+        _minSpeedMetresPerSecond = vehicleType.MinSpeedKmh / 3.6;
+        _maxSpeedMetresPerSecond = vehicleType.MaxSpeedKmh / 3.6;
+
+        MaxTurnRateDegreesPerSecond = vehicleType.MaxTurnRateDegreesPerSecond;
     }
 
     /// <summary>
@@ -72,6 +91,13 @@ public sealed class OwnVehicle
         }
 
         UpdateNavigating(simulationStep);
+
+        /***** Debug logging is disabled by default to avoid excessive log volume. Enable if needed for troubleshooting. *****
+        Logger.Debug(
+            "Own Vehicle updated: Position ({Lat}, {Lon}), Heading {Heading}, Speed {Speed} m/s, Target Waypoint {TargetLat}, {TargetLon}",
+            Position.Latitude, Position.Longitude, Position.Heading, Speed,
+            _currentTargetWaypoint.Latitude, _currentTargetWaypoint.Longitude);
+        *****/
     }
 
 
@@ -97,8 +123,17 @@ public sealed class OwnVehicle
         double headingDegrees = ApplyTurnRateLimit(
             Position.Heading, desiredBearingDegrees, maxTurnThisTickDegrees);
 
-        // Waypoint speed is km/h; vehicle motion here works in metres/second.
-        Speed = target.Speed / 3.6;
+        // Waypoint speed is km/h; vehicle motion works in metres/second. The
+        // waypoint expresses a desired speed, not a guarantee - it is clamped
+        // to this vehicle's own configured limits, since the same route may
+        // be assigned to a different vehicle type with different capabilities
+        // on another run. See GBMS_Vehicle_Configuration_Design.md §6.
+        double requestedSpeedMetresPerSecond = target.Speed / 3.6;
+
+        Speed = Math.Clamp(
+            requestedSpeedMetresPerSecond,
+            _minSpeedMetresPerSecond,
+            _maxSpeedMetresPerSecond);
 
         double travelDistanceMetres = Speed * simulationStep.TotalSeconds;
 

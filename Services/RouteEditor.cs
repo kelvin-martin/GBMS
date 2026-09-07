@@ -22,8 +22,8 @@ public sealed class RouteEditor
 
     // Waypoint speed limits for the Tactical Map route editor.
     private const int DefaultWaypointSpeed = 45;
-    private const int MinimumWaypointSpeed = 10;
-    private const int MaximumWaypointSpeed = 70;
+    private const int MinimumWaypointSpeed = 0;
+    private const int MaximumWaypointSpeed = 150;
 
     private int? _draggedWaypointIndex;
 

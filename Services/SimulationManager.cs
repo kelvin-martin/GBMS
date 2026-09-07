@@ -21,11 +21,11 @@ public class SimulationManager
     public SimulationState SimulationState { get; }
 
 
-    public SimulationManager()
+    public SimulationManager(VehicleType vehicleType, ScenarioConfiguration scenario)
     {
         Clock = new SimulationClock();
 
-        OwnVehicle = new OwnVehicle();
+        OwnVehicle = new OwnVehicle(vehicleType, scenario);
 
         SimulationState = new SimulationState();
 

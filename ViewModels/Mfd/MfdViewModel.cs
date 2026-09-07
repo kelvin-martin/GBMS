@@ -7,7 +7,6 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using GBMS.Services;
-using GBMS.Simulation;
 
 namespace GBMS.ViewModels.Mfd;
 
@@ -127,8 +126,19 @@ public partial class MfdViewModel : ObservableObject
             _messenger.MessageReceived += OnMessageReceived;
         }
 
+        // Replay anything recorded before this subscription existed - e.g.
+        // configuration fallbacks discovered during ApplicationFactory.Initialize(),
+        // which runs before this ViewModel exists. See
+        // ApplicationFactory.StartupAlerts / GBMS_Vehicle_Configuration_Design.md §5.
+        foreach (AppMessage startupAlert in ApplicationFactory.StartupAlerts)
+        {
+            OnMessageReceived(this, startupAlert);
+        }
+
         UpdateCurrentContentViewModel();
     }
+
+
 
     public bool IsNavigationEnabled => CurrentFunctionalArea != MfdFunctionalArea.None;
 
